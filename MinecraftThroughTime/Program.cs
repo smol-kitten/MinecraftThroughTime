@@ -216,7 +216,7 @@ namespace MinecraftThroughTime
 
             CDL cDL = new CDL();
             //if file url use cDL DownloadFresh
-            if(!System.IO.File.Exists(profile))
+            if(!System.IO.File.Exists(profile) && cDL.ExistsRemote(profile))
             {
                 profile = cDL.DownloadFresh(profile);
             }
