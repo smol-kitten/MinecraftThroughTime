@@ -212,9 +212,9 @@ namespace MinecraftThroughTime
         /// <returns>
         /// URL to server jar
         /// </returns>
-        public static string getServerJar(string version)
+        public static string getServerJar(string version, string profile)
         {
-            MTTProfile mttProfile = GetProfile("profile.json");
+            MTTProfile mttProfile = GetProfile(profile);
 
             //find server jar for version
             for (int i = 0; i < mttProfile.Entries.Count; i++)
@@ -237,10 +237,10 @@ namespace MinecraftThroughTime
         /// </summary>
         /// <param name="version">version to update to</param>
         /// <param name="serverJar">path to server jar</param>
-        public static void UpdateServer(string version, string serverJar)
+        public static void UpdateServer(string version, string serverJar, string profile)
         {
             //get server jar
-            string serverJarUrl = getServerJar(version);
+            string serverJarUrl = getServerJar(version, profile);
 
             //download server jar
             cDL.Download(serverJarUrl, serverJar);

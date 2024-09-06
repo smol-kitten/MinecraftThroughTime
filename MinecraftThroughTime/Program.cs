@@ -214,11 +214,18 @@ namespace MinecraftThroughTime
                 }
             }
 
+            CDL cDL = new CDL();
+            //if file url use cDL DownloadFresh
+            if(!System.IO.File.Exists(profile))
+            {
+                profile = cDL.DownloadFresh(profile);
+            }
+
             //Test for existence of profile and server jar
             if(profile == "")
                 profile = "profile.json";
 
-            CDL cDL = new CDL();
+           
 
             //Test for existence of profile
             if(!System.IO.File.Exists(profile) && !cDL.ExistsRemote(profile))
@@ -229,12 +236,7 @@ namespace MinecraftThroughTime
                 System.Environment.Exit(1);
             }
 
-            //if file url use cDL DownloadFresh
-            if(cDL.ExistsRemote(profile))
-            {
-                profile = cDL.DownloadFresh(profile);
-            }
-
+           
             //Update Server
             if(args[1] == "server")
             {
@@ -255,7 +257,7 @@ namespace MinecraftThroughTime
                 if(version == "")
                     version = MinecraftThroughTime.Update.GetExpectedServerVersion(profile, increment, serverJar);
 
-                MinecraftThroughTime.Update.UpdateServer(version, serverJar);
+                MinecraftThroughTime.Update.UpdateServer(version, serverJar, profile);
             }
             //Update Client
             else if(args[1] == "client")
