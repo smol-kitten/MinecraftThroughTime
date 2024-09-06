@@ -7,6 +7,9 @@ Using this you can make a Singleplayer or Multiplayer experience to relive old v
 Should be Feature complete, but the project we planned did not start.
 So this tool is mostly untested and might wont receive any updates.
 
+## Last Build
+[![Build Lists](https://github.com/smol-kitten/honeypot-urls/actions/workflows/build.yml/badge.svg)](https://github.com/smol-kitten/honeypot-urls/actions/workflows/build.yml)
+
 ## Features
 - Create a Profile with a list of dates and versions
 - Load a Profile from a URL or File
