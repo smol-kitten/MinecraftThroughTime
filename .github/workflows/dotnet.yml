@@ -34,7 +34,7 @@ jobs:
         path: ${{ github.workspace }}
     #Upload Release
     - name: Make zip
-      run: zip -r build.tar.gz ./Release/*
+      run: zip -r build.zip ./Release/*
       shell: bash
     - name: Create Release
       uses: softprops/action-gh-release@v2
