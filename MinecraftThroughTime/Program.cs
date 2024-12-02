@@ -24,6 +24,7 @@ namespace MinecraftThroughTime
                 System.Console.WriteLine("       -f uses profile from path, tries relative profile.json if not provided. Can also use url to download profile");
                 System.Console.WriteLine("       -j uses server jar from path, tries relative server.jar if not provided");
                 System.Console.WriteLine("       -v force version");
+                System.Console.WriteLine("       -i increment version, if not given, calculates next version based on profile, if given, gets next version in profile");
                 sfc(ConsoleColor.Yellow); sbc(ConsoleColor.Black);
                 System.Console.WriteLine("make [-f <version_manifestv2.json>] [-o <outputFile>] -t [old_alpha,old_beta,snapshot,release] [-s (only versions with server)] -i <interval>");
                 sfc(ConsoleColor.White); sbc(ConsoleColor.Black);
@@ -381,7 +382,9 @@ namespace MinecraftThroughTime
             if(bakedFile != "")
                 return bakedFile;
 
-            string path = Environment.ProcessPath;
+            string? path = Environment.ProcessPath;
+            if (path == null)
+                return "";
 
             FileStream fs = File.OpenRead(path);
             fs.Seek(0, SeekOrigin.End);

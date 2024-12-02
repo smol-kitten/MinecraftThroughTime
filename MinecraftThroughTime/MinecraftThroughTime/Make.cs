@@ -20,8 +20,8 @@ namespace MinecraftThroughTime
         /// <param name="allowUnofficial">allow unofficial server jars</param>
         public static void MakeProfile(string manifest, string output, string types, bool server, int interval, bool allowUnofficial = false)
         {
-            vmv2 vm = new vmv2();
-            CDL cDL = new CDL();
+            vmv2 vm = new();
+            CDL cDL = new();
 
             string json = "";
 
@@ -36,21 +36,21 @@ namespace MinecraftThroughTime
                 {
                     json = System.IO.File.ReadAllText(manifest);
                 }
-                catch(Exception e)
+                catch(Exception)
                 {
                     System.Console.WriteLine("Failed to read manifest from file: " + manifest);
                     System.Environment.Exit(1);
                 }
             }
 
-            vm = JsonSerializer.Deserialize<vmv2>(json);
+            vm = JsonSerializer.Deserialize<vmv2>(json) ?? throw new InvalidOperationException("Failed to deserialize vm JSON.");
 
-            if(vm == null)
+            if (vm.versions == null)
             {
-                System.Console.WriteLine("Failed to deserialize version manifest");
+                System.Console.WriteLine("No versions found in manifest");
                 System.Environment.Exit(1);
             }
-
+            
             //sort by "releaseTime": "2011-07-07T22:00:00+00:00", ASC
             vm.versions.Sort((x, y) => x.releaseTime.CompareTo(y.releaseTime));
 
@@ -90,6 +90,9 @@ namespace MinecraftThroughTime
             MTTProfileEntry met;
 
             CDL cDL = new CDL();
+
+            if (vm.versions == null)
+                return profile;
 
             foreach(MCVersion version in vm.versions)
             {
@@ -161,9 +164,9 @@ namespace MinecraftThroughTime
             {
                 CDL cDL = new CDL();
                 json = cDL.DownloadString(url);
-                return JsonSerializer.Deserialize<version_manifest>(json);
+                return JsonSerializer.Deserialize<version_manifest>(json) ?? throw new InvalidOperationException("Failed to deserialize VM JSON.");
             }
-            catch(Exception e)
+            catch(Exception)
             {
                 System.Environment.Exit(1);
             }
@@ -187,7 +190,9 @@ namespace MinecraftThroughTime
                 return false;
 
             //copy self with "_baked" suffix
-            string path = Environment.ProcessPath;
+            string? path = Environment.ProcessPath;
+            if (path == null)
+                return false;
             string ext = System.IO.Path.GetExtension(path);
             string newPath = path.Replace(ext, "_baked" + ext);
             if (File.Exists(newPath))
@@ -273,25 +278,25 @@ namespace MinecraftThroughTime
     class vmv2
     {
         [JsonPropertyName("latest")]
-        public Latest latest { get; set; }
+        public Latest? latest { get; set; }
 
         [JsonPropertyName("versions")]
-        public List<MCVersion> versions { get; set; }
+        public List<MCVersion>? versions { get; set; }
 
         public class MCVersion
         {
             [JsonPropertyName("id")]
-            public string id { get; set; }
+            public required string id { get; set; }
             [JsonPropertyName("type")]
-            public string type { get; set; }
+            public required string type { get; set; }
             [JsonPropertyName("url")]
-            public string url { get; set; }
+            public required string url { get; set; }
             [JsonPropertyName("time")]
-            public string time { get; set; }
+            public required string time { get; set; }
             [JsonPropertyName("releaseTime")]
-            public string releaseTime { get; set; }
+            public required string releaseTime { get; set; }
             [JsonPropertyName("sha1")]
-            public string sha1 { get; set; }
+            public required string sha1 { get; set; }
             [JsonPropertyName("complianceLevel")]
             public int complianceLevel { get; set; }
         }
@@ -299,9 +304,9 @@ namespace MinecraftThroughTime
         public class Latest
         {
             [JsonPropertyName("release")]
-            public string release { get; set; }
+            public required string release { get; set; }
             [JsonPropertyName("snapshot")]
-            public string snapshot { get; set; }
+            public required string snapshot { get; set; }
         }
     }
 }

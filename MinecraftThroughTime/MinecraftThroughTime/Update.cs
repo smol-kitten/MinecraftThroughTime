@@ -193,13 +193,13 @@ namespace MinecraftThroughTime
             {
                 //download profile
                 string profileJson = cDL.DownloadString(profile);
-                mttProfile = JsonSerializer.Deserialize<MTTProfile>(profileJson);
+                mttProfile = JsonSerializer.Deserialize<MTTProfile>(profileJson) ?? throw new InvalidOperationException("Failed to deserialize profile JSON.");
             }
             else
             {
                 //if profile is file load from file
                 string profileJson = System.IO.File.ReadAllText(profile);
-                mttProfile = JsonSerializer.Deserialize<MTTProfile>(profileJson);
+                mttProfile = JsonSerializer.Deserialize<MTTProfile>(profileJson) ?? throw new InvalidOperationException("Failed to deserialize profile JSON.");
             }
 
             return mttProfile;
@@ -267,7 +267,12 @@ namespace MinecraftThroughTime
         /// <param name="serverJar">path to server jar</param>
         private static void L4JF(string version, string serverJar)
         {
-            string path = System.IO.Path.GetDirectoryName(serverJar);
+            string? path = System.IO.Path.GetDirectoryName(serverJar);
+            if (path == null)
+            {
+                System.Console.WriteLine("Error getting path");
+                System.Environment.Exit(1);
+            }
             string param = "";
 
             //if 1.17 use command line fix

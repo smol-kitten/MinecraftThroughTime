@@ -36,6 +36,7 @@ update server/client [-f <profileFile/url>] [-j <serverJarPath>] -i
     -f uses profile from path, tries relative profile.json if not provided. Can also use url to download profile
     -j uses server jar from path, tries relative server.jar if not provided
     -v force version
+    -i increment version, ignores date and sets next version according to profile
 ```
 
 #### Make:
@@ -105,3 +106,7 @@ cache clean
     - Updates the Client with a Profile from a profile relative to the batch.
 - ## updateServer.bat
     - Updates the Server with a Profile from a profile relative to the batch.
+- ## incrementClient.bat
+    - Updates Client to next version in profile ignoring date.
+- ## MakeProfile.bat
+    - Create a profile with all versions available in launcher.
