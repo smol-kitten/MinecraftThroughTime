@@ -8,7 +8,7 @@ Should be Feature complete, but the project we planned did not start.
 So this tool is mostly untested and might wont receive any updates.
 
 ## Last Build
-[![Build Lists](https://github.com/smol-kitten/honeypot-urls/actions/workflows/build.yml/badge.svg)](https://github.com/smol-kitten/honeypot-urls/actions/workflows/build.yml)
+[![.NET](https://github.com/smol-kitten/MinecraftThroughTime/actions/workflows/dotnet.yml/badge.svg)](https://github.com/smol-kitten/MinecraftThroughTime/actions/workflows/dotnet.yml)
 
 ## Features
 - Create a Profile with a list of dates and versions
