@@ -30,8 +30,8 @@ jobs:
     - name: Make abbr exe for Self Contained
       run: cp ./Release/MinecraftThroughTime.exe ./Release/MTT_SC.exe
       shell: bash
-    - name: Build Normal
-      run: dotnet publish -c Release --output ./Release --runtime win-x86 -p:PublishSingleFile=true
+    #- name: Build Normal
+    #  run: dotnet publish -c Release --output ./Release --runtime win-x86 -p:PublishSingleFile=true
     - name: Upload build artifacts
       uses: actions/upload-artifact@v3
       with:
@@ -48,8 +48,7 @@ jobs:
       uses: softprops/action-gh-release@v2
       with:
           files: |
-           MinecraftThroughTime.zip 
-           ./Release/MTT.exe
+           MinecraftThroughTime.zip     
            ./Release/MTT_SC.exe
           draft: false
           prerelease: true
