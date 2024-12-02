@@ -52,7 +52,8 @@ namespace MinecraftThroughTime
                 if (index == -1)
                 {
                     Console.WriteLine("Version " +currentVersion + " not found in profile");
-                    Environment.Exit(1);
+                    Program.Exit(1);
+                    return "";
                 }
 
                 //increment version index by 1 and return version
@@ -71,7 +72,7 @@ namespace MinecraftThroughTime
 
             //if no version found throw error
             Console.WriteLine("No version match found");
-            Environment.Exit(1);
+            Program.Exit(1);
             //for compiler 
             return "";
         }
@@ -104,7 +105,7 @@ namespace MinecraftThroughTime
                 }
             }
             Console.WriteLine("No version match found");
-            Environment.Exit(1);
+            Program.Exit(1);
             //for compiler
             return "";
         }
@@ -143,7 +144,8 @@ namespace MinecraftThroughTime
                 if (index == -1)
                 {
                     Console.WriteLine("Version " + currentVersion + " not found in profile");
-                    Environment.Exit(1);
+                    Program.Exit(1);
+                    return "";
                 }
 
                 //increment version index by 1 and return version
@@ -162,7 +164,7 @@ namespace MinecraftThroughTime
 
             //if no version found throw error
             Console.WriteLine("No version match found");
-            Environment.Exit(1);
+            Program.Exit(1);
             //for compiler
             return "";
         }
@@ -217,7 +219,7 @@ namespace MinecraftThroughTime
 
             //if no version found throw error
             Console.WriteLine("No server jar found for version");
-            Environment.Exit(1);
+            Program.Exit(1);
             //for compiler 
             return "";
         }
@@ -231,6 +233,13 @@ namespace MinecraftThroughTime
         {
             //get server jar
             string serverJarUrl = getServerJar(version, profile);
+
+            if(serverJarUrl == "")
+            {
+                Console.WriteLine("No server jar found for version");
+                Program.Exit(1);
+                return;
+            }
 
             //download server jar
             cDL.Download(serverJarUrl, serverJar);

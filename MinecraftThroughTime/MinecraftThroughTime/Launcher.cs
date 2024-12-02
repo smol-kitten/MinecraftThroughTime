@@ -16,7 +16,7 @@ namespace MinecraftThroughTime
             if (!File.Exists(path))
             {
                 Console.WriteLine("Launcher profiles not found");
-                Environment.Exit(1);
+                Program.Exit(1);
             }
 
             string json = File.ReadAllText(path);

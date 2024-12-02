@@ -38,7 +38,8 @@ namespace MinecraftThroughTime
                 catch(Exception)
                 {
                     Console.WriteLine("Failed to read manifest from file: " + manifest);
-                    Environment.Exit(1);
+                    Program.Exit(1);
+                    return;
                 }
             }
 
@@ -47,7 +48,8 @@ namespace MinecraftThroughTime
             if (vm.Versions == null)
             {
                 Console.WriteLine("No versions found in manifest");
-                Environment.Exit(1);
+                Program.Exit(1);
+                return;
             }
             
             //sort by "releaseTime": "2011-07-07T22:00:00+00:00", ASC
@@ -62,7 +64,7 @@ namespace MinecraftThroughTime
             Console.WriteLine("Profile:");
             Console.WriteLine("-   contains " + mttProfile.Entries.Count + " entries");
             Console.WriteLine("-   will start on " + mttProfile.StartDate);
-            Console.WriteLine("-   will increment by " + mttProfile.Interval + " days");
+            Console.WriteLine("-   will increment every " + mttProfile.Interval + " days");
             if(interval > 0)
                 Console.WriteLine("-   will take " + (mttProfile.Interval * mttProfile.Entries.Count) + " days to reach last version");
         }
@@ -132,7 +134,7 @@ namespace MinecraftThroughTime
         /// <returns>c# object with the profile entry</returns>
         public static MTTProfileEntry MakeVersionEntry(MCVersion version, string Date)
         {
-            version_manifest vm = getVM(version.Url);
+            version_manifest vm = GetVM(version.Url);
 
             MTTProfileEntry entry = new()
             {
@@ -157,7 +159,7 @@ namespace MinecraftThroughTime
         /// </summary>
         /// <param name="url">URL to the version manifest</param>
         /// <returns>verson manifest object</returns>
-        public static version_manifest getVM(string url)
+        public static version_manifest GetVM(string url)
         {
             string json;
             try
@@ -168,9 +170,8 @@ namespace MinecraftThroughTime
             }
             catch(Exception)
             {
-                Environment.Exit(1);
+                Program.Exit(1);
             }
-
             return new version_manifest();
         }
     }
@@ -181,9 +182,8 @@ namespace MinecraftThroughTime
         /// Bake a profile(path/url) into the exe
         /// </summary>
         /// <param name="urlOrPath">path to bake (max. 512 chars)</param>
-        /// <param name="full_profile">Not Implemented, bake full file instead of path</param>
         /// <returns>true/false</returns>
-        public static bool BakeProfile(string urlOrPath, bool full_profile)
+        public static bool BakeProfile(string urlOrPath)
         {
             //if more than 512 bytes, return false
             if(urlOrPath.Length > 512)
@@ -195,7 +195,7 @@ namespace MinecraftThroughTime
                 return false;
 
             string ext = Path.GetExtension(path);
-            string newPath = path.Replace(ext, "_baked" + ext);
+            string newPath = path.Replace(ext, "_PathBaked" + ext);
 
             if (File.Exists(newPath))
                 File.Delete(newPath);
@@ -203,6 +203,60 @@ namespace MinecraftThroughTime
 
             //write the path into the exe
             byte[] data = System.Text.Encoding.UTF8.GetBytes("[MTT]"+urlOrPath);
+
+            //write the url into the exe
+            using FileStream fs = new(newPath, FileMode.Open, FileAccess.Write);
+            fs.Seek(0, SeekOrigin.End);
+            fs.Write(data, 0, data.Length);
+
+            return true;
+        }
+
+        /// <summary>
+        /// Bake a profile(path/url) COMPLETELY into the exe
+        /// </summary>
+        /// <param name="urlOrPath">path to file to bake into the exe (max. 512 chars)</param>
+        /// <returns>true/false</returns>
+        /// <remarks>
+        /// This will download and cache the file and write it into the exe
+        /// If the file is larger than int32.maxvalue, it will fail
+        /// </remarks>
+        public static bool BakeFully(string urlOrPath)
+        {
+            //if more than 512 bytes, return false
+            if(urlOrPath.Length > 512)
+                return false;
+
+            //copy self with "_baked" suffix
+            string? path = Environment.ProcessPath;
+            if (path == null)
+                return false;
+
+            string ext = Path.GetExtension(path);
+            string newPath = path.Replace(ext, "_FullyBaked" + ext);
+
+            if (File.Exists(newPath))
+                File.Delete(newPath);
+            File.Copy(path, newPath);
+
+            CDL cDL = new();
+
+            byte[] rawdata; 
+            if (urlOrPath.StartsWith("http"))
+                rawdata = cDL.DownloadBytes(urlOrPath);
+            else
+                if(File.Exists(urlOrPath))
+                    rawdata = File.ReadAllBytes(urlOrPath);
+                else
+                    return false;
+
+            //write the path into the exe
+            byte[] data = System.Text.Encoding.UTF8.GetBytes("[MTT]");
+            data = data.Concat(rawdata).ToArray();
+            data = data.Concat(System.Text.Encoding.UTF8.GetBytes("[MTTDL]")).ToArray();
+            data = data.Concat(BitConverter.GetBytes(rawdata.Length)).ToArray();
+            data = data.Concat(System.Text.Encoding.UTF8.GetBytes("[MTTFBP]")).ToArray();
+
 
             //write the url into the exe
             using FileStream fs = new(newPath, FileMode.Open, FileAccess.Write);
@@ -309,4 +363,5 @@ namespace MinecraftThroughTime
             public required string Snapshot { get; set; }
         }
     }
+
 }

@@ -25,8 +25,13 @@ jobs:
         dotnet-version: 8.0.x
     - name: Restore dependencies
       run: dotnet restore
-    - name: Build
+    - name: Build Self Contained
       run: dotnet publish -c Release --output ./Release --runtime win-x86 --self-contained true -p:PublishSingleFile=true
+    - name: Make abbr exe for Self Contained
+      run: cp ./Release/MinecraftThroughTime.exe ./Release/MTT_SC.exe
+      shell: bash
+    - name: Build Normal
+      run: dotnet publish -c Release --output ./Release --runtime win-x86 -p:PublishSingleFile=true
     - name: Upload build artifacts
       uses: actions/upload-artifact@v3
       with:
@@ -45,6 +50,7 @@ jobs:
           files: |
            MinecraftThroughTime.zip 
            ./Release/MTT.exe
+           ./Release/MTT_SC.exe
           draft: false
           prerelease: true
           tag_name: auto-release
