@@ -1,8 +1,7 @@
-﻿using MinecraftThroughTime;
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 using static MinecraftThroughTime.MTTProfile;
-using static MinecraftThroughTime.vmv2;
+using static MinecraftThroughTime.Vmv2;
 
 
 namespace MinecraftThroughTime
@@ -20,7 +19,7 @@ namespace MinecraftThroughTime
         /// <param name="allowUnofficial">allow unofficial server jars</param>
         public static void MakeProfile(string manifest, string output, string types, bool server, int interval, bool allowUnofficial = false)
         {
-            vmv2 vm = new();
+            Vmv2 vm = new();
             CDL cDL = new();
 
             string json = "";
@@ -34,38 +33,38 @@ namespace MinecraftThroughTime
             {
                 try
                 {
-                    json = System.IO.File.ReadAllText(manifest);
+                    json = File.ReadAllText(manifest);
                 }
                 catch(Exception)
                 {
-                    System.Console.WriteLine("Failed to read manifest from file: " + manifest);
-                    System.Environment.Exit(1);
+                    Console.WriteLine("Failed to read manifest from file: " + manifest);
+                    Environment.Exit(1);
                 }
             }
 
-            vm = JsonSerializer.Deserialize<vmv2>(json) ?? throw new InvalidOperationException("Failed to deserialize vm JSON.");
+            vm = JsonSerializer.Deserialize<Vmv2>(json) ?? throw new InvalidOperationException("Failed to deserialize vm JSON.");
 
-            if (vm.versions == null)
+            if (vm.Versions == null)
             {
-                System.Console.WriteLine("No versions found in manifest");
-                System.Environment.Exit(1);
+                Console.WriteLine("No versions found in manifest");
+                Environment.Exit(1);
             }
             
             //sort by "releaseTime": "2011-07-07T22:00:00+00:00", ASC
-            vm.versions.Sort((x, y) => x.releaseTime.CompareTo(y.releaseTime));
+            vm.Versions.Sort((x, y) => x.ReleaseTime.CompareTo(y.ReleaseTime));
 
             MTTProfile mttProfile = MakeMTTProfile(ref vm, types, server, interval, allowUnofficial);
             json = JsonSerializer.Serialize(mttProfile);
-            System.IO.File.WriteAllText(output, json);
+            File.WriteAllText(output, json);
 
-            System.Console.WriteLine("Profile created");
-            System.Console.WriteLine("Profile saved to " + output);
-            System.Console.WriteLine("Profile:");
-            System.Console.WriteLine("-   contains " + mttProfile.Entries.Count + " entries");
-            System.Console.WriteLine("-   will start on " + mttProfile.StartDate);
-            System.Console.WriteLine("-   will increment by " + mttProfile.Interval + " days");
+            Console.WriteLine("Profile created");
+            Console.WriteLine("Profile saved to " + output);
+            Console.WriteLine("Profile:");
+            Console.WriteLine("-   contains " + mttProfile.Entries.Count + " entries");
+            Console.WriteLine("-   will start on " + mttProfile.StartDate);
+            Console.WriteLine("-   will increment by " + mttProfile.Interval + " days");
             if(interval > 0)
-                System.Console.WriteLine("-   will take " + (mttProfile.Interval * mttProfile.Entries.Count) + " days to reach last version");
+                Console.WriteLine("-   will take " + (mttProfile.Interval * mttProfile.Entries.Count) + " days to reach last version");
         }
 
         /// <summary>
@@ -77,26 +76,26 @@ namespace MinecraftThroughTime
         /// <param name="interval">interval between versions in days, -1 for no interval</param>
         /// <param name="allowUnofficial">allow unofficial server jars</param>
         /// <returns></returns>
-        public static MTTProfile MakeMTTProfile(ref vmv2 vm, string types, bool server, int interval, bool allowUnofficial)
+        public static MTTProfile MakeMTTProfile(ref Vmv2 vm, string types, bool server, int interval, bool allowUnofficial)
         {
-            MTTProfile profile = new MTTProfile();
+            MTTProfile profile = new();
 
             string[] AllowedTypes = types.Split(",");
 
-            profile.StartDate = System.DateTime.Now.ToString("yyyy-MM-dd");
-            DateTime Date = System.DateTime.Now;
+            profile.StartDate = DateTime.Now.ToString("yyyy-MM-dd");
+            DateTime Date = DateTime.Now;
             profile.Interval = interval;
 
             MTTProfileEntry met;
 
-            CDL cDL = new CDL();
+            CDL cDL = new();
 
-            if (vm.versions == null)
+            if (vm.Versions == null)
                 return profile;
 
-            foreach(MCVersion version in vm.versions)
+            foreach(MCVersion version in vm.Versions)
             {
-                if(AllowedTypes.Contains(version.type))
+                if(AllowedTypes.Contains(version.Type))
                 {
                     if(interval != -1)
                         Date = Date.AddDays(interval);
@@ -106,10 +105,10 @@ namespace MinecraftThroughTime
                         if(met.ServerJar == null || met.ServerJar == "") { 
                             if(allowUnofficial)
                             {
-                                if(cDL.ExistsRemote("http://176.9.46.26:9000/mtt/Unofficial/" + version.id + "/server.jar"))
+                                if(cDL.ExistsRemote("http://176.9.46.26:9000/mtt/Unofficial/" + version.Id + "/server.jar"))
                                 {
-                                    met.ServerJar = "http://176.9.46.26:9000/mtt/Unofficial/" + version.id + "/server.jar";
-                                    met.Sha1 = cDL.GetSha1(cDL.DownloadBytes(met.ServerJar));
+                                    met.ServerJar = "http://176.9.46.26:9000/mtt/Unofficial/" + version.Id + "/server.jar";
+                                    met.Sha1 = CDL.GetSha1(cDL.DownloadBytes(met.ServerJar));
                                 }
                                 else
                                     continue;
@@ -133,17 +132,18 @@ namespace MinecraftThroughTime
         /// <returns>c# object with the profile entry</returns>
         public static MTTProfileEntry MakeVersionEntry(MCVersion version, string Date)
         {
-            version_manifest vm = getVM(version.url);
+            version_manifest vm = getVM(version.Url);
 
-            MTTProfileEntry entry = new MTTProfileEntry();
-
-            entry.Version = version.id;
-            entry.Date = Date;
-
-            if(vm.downloads.server != null && vm.downloads.server.url != "")
+            MTTProfileEntry entry = new()
             {
-                entry.ServerJar = vm.downloads.server.url;
-                entry.Sha1 = vm.downloads.server.sha1;
+                Version = version.Id,
+                Date = Date
+            };
+
+            if (vm.Downloads.Server != null && vm.Downloads.Server.Url != "")
+            {
+                entry.ServerJar = vm.Downloads.Server.Url;
+                entry.Sha1 = vm.Downloads.Server.Sha1;
             }else
             {
                 entry.ServerJar = "";
@@ -159,16 +159,16 @@ namespace MinecraftThroughTime
         /// <returns>verson manifest object</returns>
         public static version_manifest getVM(string url)
         {
-            string json = "";
+            string json;
             try
             {
-                CDL cDL = new CDL();
+                CDL cDL = new();
                 json = cDL.DownloadString(url);
                 return JsonSerializer.Deserialize<version_manifest>(json) ?? throw new InvalidOperationException("Failed to deserialize VM JSON.");
             }
             catch(Exception)
             {
-                System.Environment.Exit(1);
+                Environment.Exit(1);
             }
 
             return new version_manifest();
@@ -193,8 +193,10 @@ namespace MinecraftThroughTime
             string? path = Environment.ProcessPath;
             if (path == null)
                 return false;
-            string ext = System.IO.Path.GetExtension(path);
+
+            string ext = Path.GetExtension(path);
             string newPath = path.Replace(ext, "_baked" + ext);
+
             if (File.Exists(newPath))
                 File.Delete(newPath);
             File.Copy(path, newPath);
@@ -203,11 +205,9 @@ namespace MinecraftThroughTime
             byte[] data = System.Text.Encoding.UTF8.GetBytes("[MTT]"+urlOrPath);
 
             //write the url into the exe
-            using(System.IO.FileStream fs = new System.IO.FileStream(newPath, System.IO.FileMode.Open, System.IO.FileAccess.Write))
-            {
-                fs.Seek(0, System.IO.SeekOrigin.End);
-                fs.Write(data, 0, data.Length);
-            }
+            using FileStream fs = new(newPath, FileMode.Open, FileAccess.Write);
+            fs.Seek(0, SeekOrigin.End);
+            fs.Write(data, 0, data.Length);
 
             return true;
         }
@@ -216,97 +216,97 @@ namespace MinecraftThroughTime
     public class version_manifest
     {
         [JsonPropertyName("assets")]
-        public string assets { get; set; }
+        public string Assets { get; set; }
         [JsonPropertyName("downloads")]
-        public Downloads downloads { get; set; }
+        public FileDownloads Downloads { get; set; }
         [JsonPropertyName("id")]
-        public string id { get; set; }
+        public string Id { get; set; }
 
-        public class Downloads
+        public class FileDownloads
         {
             [JsonPropertyName("client")]
-            public Client client { get; set; }
+            public ClientDownloads Client { get; set; }
             [JsonPropertyName("server")]
-            public Server server { get; set; }
+            public ServerDownloads Server { get; set; }
 
-            public class Client
+            public class ClientDownloads
             {
                 [JsonPropertyName("sha1")]
-                public string sha1 { get; set; }
+                public string Sha1 { get; set; }
                 [JsonPropertyName("size")]
-                public int size { get; set; }
+                public int Size { get; set; }
                 [JsonPropertyName("url")]
-                public string url { get; set; }
+                public string Url { get; set; }
 
-                public Client() {
-                    sha1 = "";
-                    size = 0;
-                    url = "";
+                public ClientDownloads() {
+                    Sha1 = "";
+                    Size = 0;
+                    Url = "";
                 }
             }
-            public class Server
+            public class ServerDownloads
             {
                 [JsonPropertyName("sha1")]
-                public string sha1 { get; set; }
+                public string Sha1 { get; set; }
                 [JsonPropertyName("size")]
-                public int size { get; set; }
+                public int Size { get; set; }
                 [JsonPropertyName("url")]
-                public string url { get; set; }
+                public string Url { get; set; }
 
-                public Server() {
-                    sha1 = "";
-                    size = 0;
-                    url = "";
+                public ServerDownloads() {
+                    Sha1 = "";
+                    Size = 0;
+                    Url = "";
                 }
             }
 
-            public Downloads()
+            public FileDownloads()
             {
-                client = new Client();
-                server = new Server();
+                Client = new();
+                Server = new();
             }
         }
 
         public version_manifest()
         {
-            assets = "";
-            downloads = new Downloads();
-            id = "";
+            Assets = "";
+            Downloads = new();
+            Id = "";
         }
     }
 
-    class vmv2
+    class Vmv2
     {
         [JsonPropertyName("latest")]
-        public Latest? latest { get; set; }
+        public LatestVersion? Latest { get; set; }
 
         [JsonPropertyName("versions")]
-        public List<MCVersion>? versions { get; set; }
+        public List<MCVersion>? Versions { get; set; }
 
         public class MCVersion
         {
             [JsonPropertyName("id")]
-            public required string id { get; set; }
+            public required string Id { get; set; }
             [JsonPropertyName("type")]
-            public required string type { get; set; }
+            public required string Type { get; set; }
             [JsonPropertyName("url")]
-            public required string url { get; set; }
+            public required string Url { get; set; }
             [JsonPropertyName("time")]
-            public required string time { get; set; }
+            public required string Time { get; set; }
             [JsonPropertyName("releaseTime")]
-            public required string releaseTime { get; set; }
+            public required string ReleaseTime { get; set; }
             [JsonPropertyName("sha1")]
-            public required string sha1 { get; set; }
+            public required string Sha1 { get; set; }
             [JsonPropertyName("complianceLevel")]
-            public int complianceLevel { get; set; }
+            public int ComplianceLevel { get; set; }
         }
 
-        public class Latest
+        public class LatestVersion
         {
             [JsonPropertyName("release")]
-            public required string release { get; set; }
+            public required string Release { get; set; }
             [JsonPropertyName("snapshot")]
-            public required string snapshot { get; set; }
+            public required string Snapshot { get; set; }
         }
     }
 }

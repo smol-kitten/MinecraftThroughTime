@@ -1,10 +1,4 @@
-﻿using System.ComponentModel;
-using System.Diagnostics;
-using System.Drawing;
-using System.IO.Enumeration;
-using System.Net.Http.Headers;
-
-namespace MinecraftThroughTime
+﻿namespace MinecraftThroughTime
 {
     internal class Program
     {
@@ -16,48 +10,48 @@ namespace MinecraftThroughTime
 
             if(args.Length == 0)
             {
-                sfc(ConsoleColor.Red); sbc(ConsoleColor.Black);
-                System.Console.WriteLine("No arguments given. Use 'update' or 'make'");
-                sfc(ConsoleColor.Yellow); sbc(ConsoleColor.Black);
-                System.Console.WriteLine("update server/client [-f <profileFile/url>] [-j <serverJarPath>] -i");
-                sfc(ConsoleColor.White); sbc(ConsoleColor.Black);
-                System.Console.WriteLine("       -f uses profile from path, tries relative profile.json if not provided. Can also use url to download profile");
-                System.Console.WriteLine("       -j uses server jar from path, tries relative server.jar if not provided");
-                System.Console.WriteLine("       -v force version");
-                System.Console.WriteLine("       -i increment version, if not given, calculates next version based on profile, if given, gets next version in profile");
-                sfc(ConsoleColor.Yellow); sbc(ConsoleColor.Black);
-                System.Console.WriteLine("make [-f <version_manifestv2.json>] [-o <outputFile>] -t [old_alpha,old_beta,snapshot,release] [-s (only versions with server)] -i <interval>");
-                sfc(ConsoleColor.White); sbc(ConsoleColor.Black);
-                System.Console.WriteLine("       -f uses version_manifestv2.json from path");
-                System.Console.WriteLine("          if not given, tries %appdata%\\.minecraft\\versions\\version_manifest_v2.json");
-                System.Console.WriteLine("       -o output file");
-                System.Console.WriteLine("          fallsback to relative profile.json");
-                System.Console.WriteLine("       -t types of versions to use, comma seperated");
-                System.Console.WriteLine("       -s only versions with server version avaliable");
-                System.Console.WriteLine("       -i interval in days between version changes, use -1 to only increment manually");
-                System.Console.WriteLine("       -u unoffical, allow server jar´s i found on the internet MIGHT BE INSECURE");
-                sfc(ConsoleColor.Yellow); sbc(ConsoleColor.Black);
-                System.Console.WriteLine("cache clean/open/list");
-                sfc(ConsoleColor.White); sbc(ConsoleColor.Black);
-                System.Console.WriteLine("       clean deletes cache");
-                System.Console.WriteLine("       open opens cache directory");
-                System.Console.WriteLine("       list lists cache directory");
-                sfc(ConsoleColor.Yellow); sbc(ConsoleColor.Black);
-                System.Console.WriteLine("bake <url/path>");
-                sfc(ConsoleColor.White); sbc(ConsoleColor.Black);
-                System.Console.WriteLine("       Bakes a profile path or url into the executable");
-                System.Console.WriteLine("       Usefull for portable applications");
-                System.Console.WriteLine("       Currently only path to a profile not full profile.");
-                System.Console.WriteLine("");
-                sfc(ConsoleColor.Blue); sbc(ConsoleColor.Black);
-                System.Console.WriteLine("Example: make -f version_manifestv2.json -o output -t old_alpha,old_beta,snapshot,release -s -i 7");
-                System.Console.WriteLine("Example: update server");
-                System.Console.WriteLine("Example: update client -f profile.json");
-                System.Console.WriteLine("Example: update client -v 1.17");
-                System.Console.WriteLine("Example: cache");
-                sfc(ConsoleColor.White); sbc(ConsoleColor.Black);
+                Sfc(ConsoleColor.Red); Sbc(ConsoleColor.Black);
+                Console.WriteLine("No arguments given. Use 'update' or 'make'");
+                Sfc(ConsoleColor.Yellow); Sbc(ConsoleColor.Black);
+                Console.WriteLine("update server/client [-f <profileFile/url>] [-j <serverJarPath>] -i");
+                Sfc(ConsoleColor.White); Sbc(ConsoleColor.Black);
+                Console.WriteLine("       -f uses profile from path, tries relative profile.json if not provided. Can also use url to download profile");
+                Console.WriteLine("       -j uses server jar from path, tries relative server.jar if not provided");
+                Console.WriteLine("       -v force version");
+                Console.WriteLine("       -i increment version, if not given, calculates next version based on profile, if given, gets next version in profile");
+                Sfc(ConsoleColor.Yellow); Sbc(ConsoleColor.Black);
+                Console.WriteLine("make [-f <version_manifestv2.json>] [-o <outputFile>] -t [old_alpha,old_beta,snapshot,release] [-s (only versions with server)] -i <interval>");
+                Sfc(ConsoleColor.White); Sbc(ConsoleColor.Black);
+                Console.WriteLine("       -f uses version_manifestv2.json from path");
+                Console.WriteLine("          if not given, tries %appdata%\\.minecraft\\versions\\version_manifest_v2.json");
+                Console.WriteLine("       -o output file");
+                Console.WriteLine("          fallsback to relative profile.json");
+                Console.WriteLine("       -t types of versions to use, comma seperated");
+                Console.WriteLine("       -s only versions with server version avaliable");
+                Console.WriteLine("       -i interval in days between version changes, use -1 to only increment manually");
+                Console.WriteLine("       -u unoffical, allow server jar´s i found on the internet MIGHT BE INSECURE");
+                Sfc(ConsoleColor.Yellow); Sbc(ConsoleColor.Black);
+                Console.WriteLine("cache clean/open/list");
+                Sfc(ConsoleColor.White); Sbc(ConsoleColor.Black);
+                Console.WriteLine("       clean deletes cache");
+                Console.WriteLine("       open opens cache directory");
+                Console.WriteLine("       list lists cache directory");
+                Sfc(ConsoleColor.Yellow); Sbc(ConsoleColor.Black);
+                Console.WriteLine("bake <url/path>");
+                Sfc(ConsoleColor.White); Sbc(ConsoleColor.Black);
+                Console.WriteLine("       Bakes a profile path or url into the executable");
+                Console.WriteLine("       Usefull for portable applications");
+                Console.WriteLine("       Currently only path to a profile not full profile.");
+                Console.WriteLine("");
+                Sfc(ConsoleColor.Blue); Sbc(ConsoleColor.Black);
+                Console.WriteLine("Example: make -f version_manifestv2.json -o output -t old_alpha,old_beta,snapshot,release -s -i 7");
+                Console.WriteLine("Example: update server");
+                Console.WriteLine("Example: update client -f profile.json");
+                Console.WriteLine("Example: update client -v 1.17");
+                Console.WriteLine("Example: cache");
+                Sfc(ConsoleColor.White); Sbc(ConsoleColor.Black);
                 //End Application with code 1
-                System.Environment.Exit(1);
+                Environment.Exit(1);
             }
 
             if(args[0] == "update")
@@ -75,15 +69,15 @@ namespace MinecraftThroughTime
             {
                 Bake(args);
             }
-            System.Console.WriteLine("Invalid arguments. Use 'update' or 'make'");
-            System.Environment.Exit(1);
+            Console.WriteLine("Invalid arguments. Use 'update' or 'make'");
+            Environment.Exit(1);
         }
 
         /*
          Helpers
         */
-        static void sfc (System.ConsoleColor color)   { Console.ForegroundColor = color; }
-        static void sbc(System.ConsoleColor color) { Console.BackgroundColor = color; }
+        static void Sfc (ConsoleColor color)   { Console.ForegroundColor = color; }
+        static void Sbc(ConsoleColor color) { Console.BackgroundColor = color; }
 
         /// <summary>
         /// Makes a new profile
@@ -93,13 +87,13 @@ namespace MinecraftThroughTime
         {
             if(args.Length == 1)
             {
-                sfc(ConsoleColor.Red); sbc(ConsoleColor.Black);
-                System.Console.WriteLine("No arguments given. Use 'make -f <version_manifestv2.json> -o <outputFolder> -t [old_alpha,old_beta,snapshot,release] -i <interval>'");
-                sfc(ConsoleColor.White); sbc(ConsoleColor.Black);
-                System.Environment.Exit(1);
+                Sfc(ConsoleColor.Red); Sbc(ConsoleColor.Black);
+                Console.WriteLine("No arguments given. Use 'make -f <version_manifestv2.json> -o <outputFolder> -t [old_alpha,old_beta,snapshot,release] -i <interval>'");
+                Sfc(ConsoleColor.White); Sbc(ConsoleColor.Black);
+                Environment.Exit(1);
             }
-            string manifest = "";
-            manifest = bakedfile();
+            string manifest;
+            manifest = Bakedfile();
             string output = "";
             string types = "";
             bool server = false;
@@ -137,7 +131,7 @@ namespace MinecraftThroughTime
             //manifest fallback
             if(manifest == "")
             {
-                manifest = System.IO.Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.ApplicationData), ".minecraft","versions","version_manifest_v2.json");
+                manifest = Path.Combine(System.Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), ".minecraft","versions","version_manifest_v2.json");
             }
 
             //output fallback
@@ -147,23 +141,23 @@ namespace MinecraftThroughTime
             }
 
             //Test for existence of manifest
-            if(!System.IO.File.Exists(manifest))
+            if(!File.Exists(manifest))
             {
-                sfc(ConsoleColor.Red); sbc(ConsoleColor.Black);
-                System.Console.WriteLine("Version manifest not found");
-                sfc(ConsoleColor.White); sbc(ConsoleColor.Black);
-                System.Environment.Exit(1);
+                Sfc(ConsoleColor.Red); Sbc(ConsoleColor.Black);
+                Console.WriteLine("Version manifest not found");
+                Sfc(ConsoleColor.White); Sbc(ConsoleColor.Black);
+                Environment.Exit(1);
             }
             //Test for valid arguments
             if(output == "" || types == "" || interval == 0)
             {
-                sfc(ConsoleColor.Red); sbc(ConsoleColor.Black);
-                System.Console.WriteLine("Invalid arguments. Use 'make [-f <version_manifestv2.json>] -o <outputFile> -t <old_alpha,old_beta,snapshot,release> -i <interval>'");
-                sfc(ConsoleColor.White); sbc(ConsoleColor.Black);
-                System.Environment.Exit(1);
+                Sfc(ConsoleColor.Red); Sbc(ConsoleColor.Black);
+                Console.WriteLine("Invalid arguments. Use 'make [-f <version_manifestv2.json>] -o <outputFile> -t <old_alpha,old_beta,snapshot,release> -i <interval>'");
+                Sfc(ConsoleColor.White); Sbc(ConsoleColor.Black);
+                Environment.Exit(1);
             }
             MinecraftThroughTime.Make.MakeProfile(manifest, output, types, server, interval, unof);
-            System.Environment.Exit(0);
+            Environment.Exit(0);
         }
 
         /// <summary>
@@ -172,21 +166,21 @@ namespace MinecraftThroughTime
         /// <param name="args">CMD Args</param>
         static void Update(string[] args)
         {
-            string baked = bakedfile();
+            string baked = Bakedfile();
             if(baked != "")
             {
-                sfc(ConsoleColor.Green); sbc(ConsoleColor.Black);
-                System.Console.WriteLine("Baked profile found, using it");
-                sfc(ConsoleColor.White); sbc(ConsoleColor.Black);
-                System.Console.WriteLine("Profile: " + baked);
+                Sfc(ConsoleColor.Green); Sbc(ConsoleColor.Black);
+                Console.WriteLine("Baked profile found, using it");
+                Sfc(ConsoleColor.White); Sbc(ConsoleColor.Black);
+                Console.WriteLine("Profile: " + baked);
             }
 
             if(args.Length == 1)
             {
-                sfc(ConsoleColor.Red); sbc(ConsoleColor.Black);
-                System.Console.WriteLine("No arguments given. Use 'update server' or 'update client'");
-                sfc(ConsoleColor.White); sbc(ConsoleColor.Black);
-                System.Environment.Exit(1);
+                Sfc(ConsoleColor.Red); Sbc(ConsoleColor.Black);
+                Console.WriteLine("No arguments given. Use 'update server' or 'update client'");
+                Sfc(ConsoleColor.White); Sbc(ConsoleColor.Black);
+                Environment.Exit(1);
             }
 
             //Get profile and server jar path
@@ -217,7 +211,7 @@ namespace MinecraftThroughTime
 
             CDL cDL = new CDL();
             //if file url use cDL DownloadFresh
-            if(!System.IO.File.Exists(profile) && cDL.ExistsRemote(profile))
+            if(!File.Exists(profile) && cDL.ExistsRemote(profile))
             {
                 profile = cDL.DownloadFresh(profile);
             }
@@ -229,19 +223,19 @@ namespace MinecraftThroughTime
            
 
             //Test for existence of profile
-            if(!System.IO.File.Exists(profile) && !cDL.ExistsRemote(profile))
+            if(!File.Exists(profile) && !cDL.ExistsRemote(profile))
             {
-                sfc(ConsoleColor.Red); sbc(ConsoleColor.Black);
-                System.Console.WriteLine("Profile file not found");
-                sfc(ConsoleColor.White); sbc(ConsoleColor.Black);
-                System.Environment.Exit(1);
+                Sfc(ConsoleColor.Red); Sbc(ConsoleColor.Black);
+                Console.WriteLine("Profile file not found");
+                Sfc(ConsoleColor.White); Sbc(ConsoleColor.Black);
+                Environment.Exit(1);
             }
 
            
             //Update Server
             if(args[1] == "server")
             {
-                System.Console.WriteLine("Updating server");
+                Console.WriteLine("Updating server");
                 if(serverJar == "")
                     serverJar = "server.jar";
 
@@ -266,17 +260,17 @@ namespace MinecraftThroughTime
                 //Calculate version if not given
                 if(version == "")
                     version = MinecraftThroughTime.Update.GetExpectedVersion(profile, increment);
-                System.Console.WriteLine("Updating client");
+                Console.WriteLine("Updating client");
                 MinecraftThroughTime.Update.UpdateClient(version);
             }
             else
             {
-                sfc(ConsoleColor.Red);
-                System.Console.WriteLine("Invalid argument. Use 'update client' or 'update server'");
-                sfc(ConsoleColor.Black);
-                System.Environment.Exit(1);
+                Sfc(ConsoleColor.Red);
+                Console.WriteLine("Invalid argument. Use 'update client' or 'update server'");
+                Sfc(ConsoleColor.Black);
+                Environment.Exit(1);
             }
-            System.Environment.Exit(0);
+            Environment.Exit(0);
         }
 
         /// <summary>
@@ -285,91 +279,91 @@ namespace MinecraftThroughTime
         /// <param name="args">CMD Args</param>
         static void Cache(string[] args)
         {
-            MinecraftThroughTime.CDL cDL = new MinecraftThroughTime.CDL();
-            System.Console.WriteLine("Cache directory: " + cDL.GetCacheDir());
+            CDL cDL = new();
+            Console.WriteLine("Cache directory: " + cDL.GetCacheDir());
 
             //args 1 clean, open, list
             if(args.Length == 1)
             {
-                sfc(ConsoleColor.Red); sbc(ConsoleColor.Black);
-                System.Console.WriteLine("No arguments given. Use 'cache clean', 'cache open' or 'cache list'");
-                sfc(ConsoleColor.White); sbc(ConsoleColor.Black);
-                System.Environment.Exit(1);
+                Sfc(ConsoleColor.Red); Sbc(ConsoleColor.Black);
+                Console.WriteLine("No arguments given. Use 'cache clean', 'cache open' or 'cache list'");
+                Sfc(ConsoleColor.White); Sbc(ConsoleColor.Black);
+                Environment.Exit(1);
             }
 
             //clean cache, delete all files
             if(args[1] == "clean")
             {
-                System.Console.WriteLine("Cleaning cache");
-                System.IO.Directory.Delete(cDL.GetCacheDir(), true);
-                System.Environment.Exit(0);
+                Console.WriteLine("Cleaning cache");
+                Directory.Delete(cDL.GetCacheDir(), true);
+                Environment.Exit(0);
             }
             //open cache directory in explorer
             else if(args[1] == "open")
             {
                 System.Diagnostics.Process.Start("explorer.exe", cDL.GetCacheDir());
-                System.Environment.Exit(0);
+                Environment.Exit(0);
             }
             //list cache directory
             else if(args[1] == "list")
             {
-                System.Console.WriteLine("Listing cache");
+                Console.WriteLine("Listing cache");
                 //files and cummulativ size
-                string[] files = System.IO.Directory.GetFiles(cDL.GetCacheDir(), "*", System.IO.SearchOption.AllDirectories);
+                string[] files = Directory.GetFiles(cDL.GetCacheDir(), "*", SearchOption.AllDirectories);
                 long size = 0;
                 foreach(string file in files)
                 {
-                    System.Console.WriteLine(file);
-                    size += new System.IO.FileInfo(file).Length;
+                    Console.WriteLine(file);
+                    size += new FileInfo(file).Length;
                 }
-                sfc(ConsoleColor.Green); sbc(ConsoleColor.Black);
-                System.Console.WriteLine("Total size: " + size + " bytes");
-                sfc(ConsoleColor.White); sbc(ConsoleColor.Black);
-                System.Environment.Exit(0);
+                Sfc(ConsoleColor.Green); Sbc(ConsoleColor.Black);
+                Console.WriteLine("Total size: " + size + " bytes");
+                Sfc(ConsoleColor.White); Sbc(ConsoleColor.Black);
+                Environment.Exit(0);
             }
 
-            System.Environment.Exit(0);
+            Environment.Exit(0);
         }
 
         static void Bake(string[] args)
         {
             if(args.Length == 1)
             {
-                sfc(ConsoleColor.Red); sbc(ConsoleColor.Black);
-                System.Console.WriteLine("No arguments given. Use 'bake <url/path>'");
-                sfc(ConsoleColor.White); sbc(ConsoleColor.Black);
-                System.Environment.Exit(1);
+                Sfc(ConsoleColor.Red); Sbc(ConsoleColor.Black);
+                Console.WriteLine("No arguments given. Use 'bake <url/path>'");
+                Sfc(ConsoleColor.White); Sbc(ConsoleColor.Black);
+                Environment.Exit(1);
             }
 
             CDL cDL = new CDL();
 
             string path = args[1];
-            if(System.IO.File.Exists(path) || (System.Uri.IsWellFormedUriString(path, UriKind.Absolute) && cDL.ExistsRemote(path)))
+            if(File.Exists(path) || (Uri.IsWellFormedUriString(path, UriKind.Absolute) && cDL.ExistsRemote(path)))
             {
                 bool r = MinecraftThroughTime.Bake.BakeProfile(path, false);
                 if(r)
                 {
-                    sfc(ConsoleColor.Green); sbc(ConsoleColor.Black);
-                    System.Console.WriteLine("Profile baked");
-                    sfc(ConsoleColor.White); sbc(ConsoleColor.Black);
-                    System.Environment.Exit(0);
+                    Sfc(ConsoleColor.Green); Sbc(ConsoleColor.Black);
+                    Console.WriteLine("Profile baked");
+                    Sfc(ConsoleColor.White); Sbc(ConsoleColor.Black);
+                    Environment.Exit(0);
                 }
                 else
                 {
-                    sfc(ConsoleColor.Red); sbc(ConsoleColor.Black);
-                    System.Console.WriteLine("Failed to bake profile");
-                    sfc(ConsoleColor.White); sbc(ConsoleColor.Black);
-                    System.Environment.Exit(1);
+                    Sfc(ConsoleColor.Red); Sbc(ConsoleColor.Black);
+                    Console.WriteLine("Failed to bake profile");
+                    Sfc(ConsoleColor.White); Sbc(ConsoleColor.Black);
+                    Environment.Exit(1);
                 }
             }
             else
             {
-                sfc(ConsoleColor.Red); sbc(ConsoleColor.Black);
-                System.Console.WriteLine("File not found");
-                sfc(ConsoleColor.White); sbc(ConsoleColor.Black);
-                System.Environment.Exit(1);
+                Sfc(ConsoleColor.Red); Sbc(ConsoleColor.Black);
+                Console.WriteLine("File not found");
+                Sfc(ConsoleColor.White); Sbc(ConsoleColor.Black);
+                Environment.Exit(1);
             }
-            System.Environment.Exit(0);
+            Environment.Exit(0);
         }
 
         /// <summary>
@@ -377,7 +371,7 @@ namespace MinecraftThroughTime
         /// </summary>
         /// <returns>empty if not found, path if found</returns>
         static string bakedFile = "";
-        static string bakedfile()
+        static string Bakedfile()
         {
             if(bakedFile != "")
                 return bakedFile;
@@ -390,8 +384,8 @@ namespace MinecraftThroughTime
             fs.Seek(0, SeekOrigin.End);
             //read backwards till [MTT], example [MTT]C:\Users\user\profile.json. This is the baked file(path)
             //path max 512 + 5, stop if not found in 517 bytes
-            byte[] buffer = new byte[0];
-            int read = 0;
+            byte[] buffer;
+            int read;
             string str = "";
             for(int i = 0; i < 517; i++)
             {
@@ -413,8 +407,6 @@ namespace MinecraftThroughTime
                 }
             }
             Console.WriteLine(str);
-
-
             return "";
         }
     }

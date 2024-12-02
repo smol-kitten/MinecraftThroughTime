@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace MinecraftThroughTime
@@ -14,27 +9,21 @@ namespace MinecraftThroughTime
         /// load the launcher profiles
         /// </summary>
         /// <returns>c# object with the launcher profiles</returns>
-        public static Launcher_Profiles getProfile()
+        public static Launcher_Profiles GetProfile()
         {
-            string path = System.IO.Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.ApplicationData), ".minecraft", "launcher_profiles.json");
+            string path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), ".minecraft", "launcher_profiles.json");
 
-            if (!System.IO.File.Exists(path))
+            if (!File.Exists(path))
             {
-                System.Console.WriteLine("Launcher profiles not found");
-                System.Environment.Exit(1);
+                Console.WriteLine("Launcher profiles not found");
+                Environment.Exit(1);
             }
 
-            string json = System.IO.File.ReadAllText(path);
-            Launcher_Profiles profiles = JsonSerializer.Deserialize<Launcher_Profiles>(json);
-
-            if (profiles == null)
-            {
-                System.Console.WriteLine("Failed to deserialize launcher profiles");
-                System.Environment.Exit(1);
-            }
+            string json = File.ReadAllText(path);
+            Launcher_Profiles profiles = JsonSerializer.Deserialize<Launcher_Profiles>(json) ?? throw new Exception("Failed to deserialize launcher profiles");
 
             //Find MTT profile
-            Launcher_Profiles.Profile profile = null;
+            Launcher_Profiles.Profile? profile = null;
 
             foreach (var p in profiles.Profiles)
             {
@@ -49,14 +38,7 @@ namespace MinecraftThroughTime
             if(profile == null)
             {
                 //add MTT profile
-                profile = new Launcher_Profiles.Profile();
-                profile.Created = DateTime.Now;
-                profile.Icon = "Lectern_Book";
-                profile.JavaArgs = "-Xmx2G";
-                profile.LastUsed = DateTime.Now;
-                profile.LastVersionId = "1.17";
-                profile.Name = "Minecraft Through Time";
-                profile.Type = "custom";
+                profile = new Launcher_Profiles.Profile() { Created = DateTime.Now, Icon = "Lectern_Book", JavaArgs = "-Xmx2G", LastUsed = DateTime.Now, LastVersionId = "1.17", Name = "Minecraft Through Time", Type = "custom" };
                 profiles.Profiles.Add("Minecraft Through Time", profile);
             }
 
@@ -67,16 +49,16 @@ namespace MinecraftThroughTime
         /// Set the version for the MTT profile
         /// </summary>
         /// <param name="version"></param>
-        public static void setVersion(string version)
+        public static void SetVersion(string version)
         {
-            Launcher_Profiles launcher_Profiles = getProfile();
+            Launcher_Profiles launcher_Profiles = GetProfile();
             //set version for MTT profile
             launcher_Profiles.Profiles["Minecraft Through Time"].LastVersionId = version;
             launcher_Profiles.Profiles["Minecraft Through Time"].LastUsed = DateTime.Now;
 
-            string path = System.IO.Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.ApplicationData), ".minecraft", "launcher_profiles.json");
+            string path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), ".minecraft", "launcher_profiles.json");
             string json = JsonSerializer.Serialize(launcher_Profiles);
-            System.IO.File.WriteAllText(path, json);
+            File.WriteAllText(path, json);
             Console.WriteLine("Version set to " + version);
         }
 
@@ -84,9 +66,9 @@ namespace MinecraftThroughTime
         /// get the version for the MTT profile
         /// </summary>
         /// <returns>version string, if not found, returns 1.17(TBC)</returns>
-        public static string getVersion()
+        public static string GetVersion()
         {
-            Launcher_Profiles launcher_Profiles = getProfile();
+            Launcher_Profiles launcher_Profiles = GetProfile();
             return launcher_Profiles.Profiles["Minecraft Through Time"].LastVersionId;
         }
     }
@@ -98,10 +80,10 @@ namespace MinecraftThroughTime
     class Launcher_Profiles
     {
         [JsonPropertyName("profiles")]
-        public Dictionary<string, Profile> Profiles { get; set; }
+        public required Dictionary<string, Profile> Profiles { get; set; }
 
         [JsonPropertyName("settings")]
-        public Settings GameSettings { get; set; }
+        public required Settings GameSettings { get; set; }
 
         [JsonPropertyName("version")]
         public int Version { get; set; }
@@ -112,22 +94,22 @@ namespace MinecraftThroughTime
             public DateTime Created { get; set; }
 
             [JsonPropertyName("icon")]
-            public string Icon { get; set; }
+            public required string Icon { get; set; }
 
             [JsonPropertyName("javaArgs")]
-            public string JavaArgs { get; set; }
+            public required string JavaArgs { get; set; }
 
             [JsonPropertyName("lastUsed")]
             public DateTime LastUsed { get; set; }
 
             [JsonPropertyName("lastVersionId")]
-            public string LastVersionId { get; set; }
+            public required string LastVersionId { get; set; }
 
             [JsonPropertyName("name")]
-            public string Name { get; set; }
+            public required string Name { get; set; }
 
             [JsonPropertyName("type")]
-            public string Type { get; set; }
+            public required string Type { get; set; }
         }
 
         public class Settings
@@ -154,7 +136,7 @@ namespace MinecraftThroughTime
             public bool KeepLauncherOpen { get; set; }
 
             [JsonPropertyName("profileSorting")]
-            public string ProfileSorting { get; set; }
+            public required string ProfileSorting { get; set; }
 
             [JsonPropertyName("showGameLog")]
             public bool ShowGameLog { get; set; }

@@ -1,23 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.ComponentModel.Design;
-using System.Net.NetworkInformation;
-using MinecraftThroughTime;
 using System.Security.Cryptography;
-using static MinecraftThroughTime.Launcher_Profiles;
-using System.IO;
 
 namespace MinecraftThroughTime
 {
     class Update
     {
 
-        static CDL cDL = new CDL();
+        static readonly CDL cDL = new();
 
         /// <summary>
         /// Gets the version TO RUN as defined by the profile
@@ -45,7 +35,7 @@ namespace MinecraftThroughTime
                 //increment version
 
                 //get current version
-                string currentVersion = Launcher.getVersion();
+                string currentVersion = Launcher.GetVersion();
 
                 //find index of current version
                 int index = -1;
@@ -61,8 +51,8 @@ namespace MinecraftThroughTime
                 //if version not found throw error
                 if (index == -1)
                 {
-                    System.Console.WriteLine("Version " +currentVersion + " not found in profile");
-                    System.Environment.Exit(1);
+                    Console.WriteLine("Version " +currentVersion + " not found in profile");
+                    Environment.Exit(1);
                 }
 
                 //increment version index by 1 and return version
@@ -80,8 +70,8 @@ namespace MinecraftThroughTime
             }
 
             //if no version found throw error
-            System.Console.WriteLine("No version match found");
-            System.Environment.Exit(1);
+            Console.WriteLine("No version match found");
+            Environment.Exit(1);
             //for compiler 
             return "";
         }
@@ -95,11 +85,11 @@ namespace MinecraftThroughTime
         private static string GetCurrentServerVersion(string profile, string path)
         {
             //get server jar
-            byte[] data = System.IO.File.ReadAllBytes(path);
+            byte[] data = File.ReadAllBytes(path);
 
             //get sha1
-            SHA1 sha1 = SHA1.Create();
-            byte[] hash = sha1.ComputeHash(data);
+            SHA1 Sha1 = SHA1.Create();
+            byte[] hash = Sha1.ComputeHash(data);
             string sha1String = BitConverter.ToString(hash).Replace("-", "").ToLower();
 
             //load profile
@@ -113,8 +103,8 @@ namespace MinecraftThroughTime
                     return mttProfile.Entries[i].Version;
                 }
             }
-            System.Console.WriteLine("No version match found");
-            System.Environment.Exit(1);
+            Console.WriteLine("No version match found");
+            Environment.Exit(1);
             //for compiler
             return "";
         }
@@ -152,8 +142,8 @@ namespace MinecraftThroughTime
                 //if version not found throw error
                 if (index == -1)
                 {
-                    System.Console.WriteLine("Version " + currentVersion + " not found in profile");
-                    System.Environment.Exit(1);
+                    Console.WriteLine("Version " + currentVersion + " not found in profile");
+                    Environment.Exit(1);
                 }
 
                 //increment version index by 1 and return version
@@ -171,8 +161,8 @@ namespace MinecraftThroughTime
             }
 
             //if no version found throw error
-            System.Console.WriteLine("No version match found");
-            System.Environment.Exit(1);
+            Console.WriteLine("No version match found");
+            Environment.Exit(1);
             //for compiler
             return "";
         }
@@ -198,7 +188,7 @@ namespace MinecraftThroughTime
             else
             {
                 //if profile is file load from file
-                string profileJson = System.IO.File.ReadAllText(profile);
+                string profileJson = File.ReadAllText(profile);
                 mttProfile = JsonSerializer.Deserialize<MTTProfile>(profileJson) ?? throw new InvalidOperationException("Failed to deserialize profile JSON.");
             }
 
@@ -226,8 +216,8 @@ namespace MinecraftThroughTime
             }
 
             //if no version found throw error
-            System.Console.WriteLine("No server jar found for version");
-            System.Environment.Exit(1);
+            Console.WriteLine("No server jar found for version");
+            Environment.Exit(1);
             //for compiler 
             return "";
         }
@@ -248,17 +238,14 @@ namespace MinecraftThroughTime
             //log4j fix
             L4JF(version, serverJar);
 
-            System.Console.WriteLine("Server jar updated to version " + version);
+            Console.WriteLine("Server jar updated to version " + version);
         }
 
         /// <summary>
         /// Sets the version for the MTT profile
         /// </summary>
         /// <param name="version"></param>
-        public static void UpdateClient(string version)
-        {
-            Launcher.setVersion(version);
-        }
+        public static void UpdateClient(string version) => Launcher.SetVersion(version);
 
         /// <summary>
         /// Log4j fix for server
@@ -267,12 +254,8 @@ namespace MinecraftThroughTime
         /// <param name="serverJar">path to server jar</param>
         private static void L4JF(string version, string serverJar)
         {
-            string? path = System.IO.Path.GetDirectoryName(serverJar);
-            if (path == null)
-            {
-                System.Console.WriteLine("Error getting path");
-                System.Environment.Exit(1);
-            }
+            string? path = Path.GetDirectoryName(serverJar) ?? throw new Exception("Invalid path");
+
             string param = "";
 
             //if 1.17 use command line fix
@@ -285,19 +268,18 @@ namespace MinecraftThroughTime
             if (version == "1.12" || version == "1.13" || version == "1.14" || version == "1.15" || version == "1.16" || version == "1.16.1" || version == "1.16.2" || version == "1.16.3" || version == "1.16.4" || version == "1.16.5")
             {
                 param = " -Dlog4j.configurationFile=log4j2_112-116.xml";
-                cDL.Download("https://launcher.mojang.com/v1/objects/02937d122c86ce73319ef9975b58896fc1b491d1/log4j2_112-116.xml", System.IO.Path.Combine(path, "log4j2_112-116.xml"));
+                cDL.Download("https://launcher.mojang.com/v1/objects/02937d122c86ce73319ef9975b58896fc1b491d1/log4j2_112-116.xml", Path.Combine(path, "log4j2_112-116.xml"));
             }
 
             //1.7-1.11.2 other file
             if (version == "1.7" || version == "1.8" || version == "1.9" || version == "1.10" || version == "1.11" || version == "1.11.1" || version == "1.11.2")
             {
                 param = " -Dlog4j.configurationFile=log4j2_17-111.xml";
-                cDL.Download("https://launcher.mojang.com/v1/objects/4bb89a97a66f350bc9f73b3ca8509632682aea2e/log4j2_17-111.xml", System.IO.Path.Combine(path, "log4j2_7-112.xml"));
+                cDL.Download("https://launcher.mojang.com/v1/objects/4bb89a97a66f350bc9f73b3ca8509632682aea2e/log4j2_17-111.xml", Path.Combine(path, "log4j2_7-112.xml"));
             }
 
-
             //write params to file to be included by server
-            System.IO.File.WriteAllText(System.IO.Path.Combine(path, "include.txt"), param);
+            File.WriteAllText(Path.Combine(path, "include.txt"), param);
         }
 
     }
