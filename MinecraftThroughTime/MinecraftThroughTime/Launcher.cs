@@ -83,7 +83,7 @@ namespace MinecraftThroughTime
         public required Dictionary<string, Profile> Profiles { get; set; }
 
         [JsonPropertyName("settings")]
-        public required Settings GameSettings { get; set; }
+        public Settings GameSettings { get; set; } = new Settings() { KeepLauncherOpen = false, ProfileSorting = "ByLastPlayed" };
 
         [JsonPropertyName("version")]
         public int Version { get; set; }
@@ -94,22 +94,22 @@ namespace MinecraftThroughTime
             public DateTime Created { get; set; }
 
             [JsonPropertyName("icon")]
-            public required string Icon { get; set; }
+            public string Icon { get; set; } = "Lectern_Book";
 
             [JsonPropertyName("javaArgs")]
-            public required string JavaArgs { get; set; }
+            public string JavaArgs { get; set; } = "";
 
             [JsonPropertyName("lastUsed")]
             public DateTime LastUsed { get; set; }
 
             [JsonPropertyName("lastVersionId")]
-            public required string LastVersionId { get; set; }
+            public string LastVersionId { get; set; } = "1.17";
 
             [JsonPropertyName("name")]
-            public required string Name { get; set; }
+            public string Name { get; set; } = "Minecraft Through Time";
 
             [JsonPropertyName("type")]
-            public required string Type { get; set; }
+            public string Type { get; set; } = "custom";
         }
 
         public class Settings
@@ -136,7 +136,7 @@ namespace MinecraftThroughTime
             public bool KeepLauncherOpen { get; set; }
 
             [JsonPropertyName("profileSorting")]
-            public required string ProfileSorting { get; set; }
+            public string ProfileSorting { get; set; } = "ByLastPlayed";
 
             [JsonPropertyName("showGameLog")]
             public bool ShowGameLog { get; set; }

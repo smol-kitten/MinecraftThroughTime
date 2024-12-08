@@ -32,15 +32,15 @@ jobs:
       shell: bash
     #- name: Build Normal
     #  run: dotnet publish -c Release --output ./Release --runtime win-x86 -p:PublishSingleFile=true
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v3
-      with:
-        name: Artifacts
-        path: ${{ github.workspace }}
+    #- name: Upload build artifacts
+    #  uses: actions/upload-artifact@v3
+    #  with:
+    #    name: Artifacts
+    #    path: ${{ github.workspace }}
     #Upload Release
-    - name: Make zip
-      run: zip -r MinecraftThroughTime.zip ./Release/*
-      shell: bash
+    #- name: Make zip
+    #  run: zip -r MinecraftThroughTime.zip ./Release/*
+    #  shell: bash
     - name: Make abbr exe
       run: cp ./Release/MinecraftThroughTime.exe ./Release/MTT.exe
       shell: bash
@@ -48,8 +48,7 @@ jobs:
       uses: softprops/action-gh-release@v2
       with:
           files: |
-           MinecraftThroughTime.zip     
            ./Release/MTT_SC.exe
           draft: false
-          prerelease: true
+          prerelease: false
           tag_name: auto-release

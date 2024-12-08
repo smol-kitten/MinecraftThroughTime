@@ -86,7 +86,7 @@
             Console.WriteLine("       -v force version");
             Console.WriteLine("       -i increment version, if not given, calculates next version based on profile, if given, gets next version in profile");
             Sfc(ConsoleColor.Yellow); Sbc(ConsoleColor.Black);
-            Console.WriteLine("make [-f <version_manifestv2.json>] [-o <outputFile>] -t [old_alpha,old_beta,snapshot,release] [-s (only versions with server)] -i <interval>");
+            Console.WriteLine("make [-f <version_manifestv2.json>] [-o <outputFile>] -t [old_alpha,old_beta,snapshot,release] [-s (only versions with server)] -i <interval> -u");
             Sfc(ConsoleColor.White); Sbc(ConsoleColor.Black);
             Console.WriteLine("       -f uses version_manifestv2.json from path");
             Console.WriteLine("          if not given, tries %appdata%\\.minecraft\\versions\\version_manifest_v2.json");
@@ -261,11 +261,23 @@
             //Test for existence of profile
             if (!File.Exists(profile) && !cDL.ExistsRemote(profile))
             {
-                Sfc(ConsoleColor.Red); Sbc(ConsoleColor.Black);
-                Console.WriteLine("Profile file not found");
-                Sfc(ConsoleColor.White); Sbc(ConsoleColor.Black);
-                Exit(1);
-                return;
+                if (version == "") {
+                    Sfc(ConsoleColor.Red); Sbc(ConsoleColor.Black);
+                    Console.WriteLine("Profile file not found and no version given");
+                    Sfc(ConsoleColor.White); Sbc(ConsoleColor.Black);
+                    Exit(1);
+                    return;
+                }else{
+                    if (args[1] == "server")
+                    {
+                        Sfc(ConsoleColor.Red); Sbc(ConsoleColor.Black);
+                        Console.WriteLine("Profile file not found, required for server update");
+                        Sfc(ConsoleColor.White); Sbc(ConsoleColor.Black);
+                        Exit(1);
+                        return;
+                    }
+                }
+                
             }
 
             //Update Server
@@ -305,6 +317,9 @@
                     version = MinecraftThroughTime.Update.GetExpectedVersion(profile, increment);
                 Console.WriteLine("Updating client");
                 MinecraftThroughTime.Update.UpdateClient(version);
+                Console.WriteLine("Done");
+                Exit(1);
+                return;
             }
             else
             {
