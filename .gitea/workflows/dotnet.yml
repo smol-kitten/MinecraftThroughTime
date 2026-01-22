@@ -1,0 +1,35 @@
+# .NET Build workflow for Gitea
+
+name: .NET
+
+on:
+  push:
+    branches: [ "master", "main" ]
+  pull_request:
+    branches: [ "master", "main" ]
+
+jobs:
+  build:
+    runs-on: self-hosted
+    permissions:
+      contents: write
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup .NET install directory
+      run: echo "DOTNET_INSTALL_DIR=$HOME/.dotnet" >> $GITHUB_ENV
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+    
+    - name: Restore dependencies
+      run: dotnet restore
+    
+    - name: Build Self Contained
+      run: dotnet publish -c Release --output ./Release --runtime win-x86 --self-contained true -p:PublishSingleFile=true
+    
+    - name: Make abbr exe
+      run: cp ./Release/MinecraftThroughTime.exe ./Release/MTT.exe
+      shell: bash
