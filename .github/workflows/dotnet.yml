@@ -1,7 +1,4 @@
-# This workflow will build a .NET project
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-net
-
-name: .NET
+name: .NET Build
 
 on:
   push:
@@ -9,46 +6,34 @@ on:
   pull_request:
     branches: [ "master" ]
 
+permissions:
+  contents: read
+
 jobs:
   build:
+    runs-on: ubuntu-latest
 
-    runs-on: self-hosted
-    permissions:
-      contents: write
     steps:
     - uses: actions/checkout@v4
-    - name: Setup .NET install directory
-      run: echo "DOTNET_INSTALL_DIR=$HOME/.dotnet" >> $GITHUB_ENV
+
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 8.0.x
+
     - name: Restore dependencies
       run: dotnet restore
-    - name: Build Self Contained
+
+    - name: Build
+      run: dotnet build -c Release --no-restore
+
+    - name: Publish self-contained
+      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
       run: dotnet publish -c Release --output ./Release --runtime win-x86 --self-contained true -p:PublishSingleFile=true
-    - name: Make abbr exe for Self Contained
-      run: cp ./Release/MinecraftThroughTime.exe ./Release/MTT_SC.exe
-      shell: bash
-    #- name: Build Normal
-    #  run: dotnet publish -c Release --output ./Release --runtime win-x86 -p:PublishSingleFile=true
-    #- name: Upload build artifacts
-    #  uses: actions/upload-artifact@v3
-    #  with:
-    #    name: Artifacts
-    #    path: ${{ github.workspace }}
-    #Upload Release
-    #- name: Make zip
-    #  run: zip -r MinecraftThroughTime.zip ./Release/*
-    #  shell: bash
-    - name: Make abbr exe
-      run: cp ./Release/MinecraftThroughTime.exe ./Release/MTT.exe
-      shell: bash
-    - name: Create Release
-      uses: softprops/action-gh-release@v2
+
+    - name: Upload build artifacts
+      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+      uses: actions/upload-artifact@v4
       with:
-          files: |
-           ./Release/MTT_SC.exe
-          draft: false
-          prerelease: false
-          tag_name: auto-release
+        name: MinecraftThroughTime
+        path: ./Release/
