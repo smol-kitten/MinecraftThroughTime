@@ -20,16 +20,21 @@ jobs:
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 8.0.x
+      env:
+        DOTNET_INSTALL_DIR: ${{ runner.temp }}/.dotnet
+
+    - name: Add .NET to PATH
+      run: echo "${{ runner.temp }}/.dotnet" >> $GITHUB_PATH
 
     - name: Restore dependencies
       run: dotnet restore
 
     - name: Build
-      run: dotnet build -c Release --no-restore
+      run: dotnet build -c Release --no-restore -p:EnableWindowsTargeting=true
 
     - name: Publish self-contained
       if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-      run: dotnet publish -c Release --output ./Release --runtime win-x86 --self-contained true -p:PublishSingleFile=true
+      run: dotnet publish -c Release --output ./Release --runtime win-x86 --self-contained true -p:PublishSingleFile=true -p:EnableWindowsTargeting=true
 
     - name: Upload build artifacts
       if: github.event_name == 'push' && github.ref == 'refs/heads/master'
