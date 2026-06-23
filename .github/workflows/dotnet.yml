@@ -12,6 +12,8 @@ permissions:
 jobs:
   build:
     runs-on: self-hosted
+    env:
+      DOTNET_INSTALL_DIR: ${{ github.workspace }}/.dotnet
 
     steps:
     - uses: actions/checkout@v4
@@ -20,11 +22,9 @@ jobs:
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 8.0.x
-      env:
-        DOTNET_INSTALL_DIR: ${{ runner.temp }}/.dotnet
 
     - name: Add .NET to PATH
-      run: echo "${{ runner.temp }}/.dotnet" >> $GITHUB_PATH
+      run: echo "${{ github.workspace }}/.dotnet" >> $GITHUB_PATH
 
     - name: Restore dependencies
       run: dotnet restore
@@ -42,3 +42,4 @@ jobs:
       with:
         name: MinecraftThroughTime
         path: ./Release/
+        retention-days: 7
