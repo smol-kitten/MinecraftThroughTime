@@ -32,6 +32,45 @@ namespace MinecraftThroughTime
         public static string GetSha1(byte[] data) => BitConverter.ToString(SHA1.HashData(data)).Replace("-", "").ToLower();
 
         /// <summary>
+        /// Map a URL to a cache file path, safely. The URL is split into path
+        /// segments (as before, so caching behaviour is unchanged), but "..",
+        /// ".", rooted, and invalid segments are stripped, and the resulting
+        /// path is verified to stay inside the cache directory — a crafted URL
+        /// cannot escape it (path traversal / arbitrary file write).
+        /// </summary>
+        private string CachePath(string url)
+        {
+            string urli = url.Replace("https:", "").Replace("http:", "").Replace(":", " ").Replace("/", " ").Replace("?", "").Replace("&", "").Replace("=", "");
+            var segments = new List<string>();
+            foreach (string raw in urli.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+            {
+                if (raw == ".." || raw == "." || Path.IsPathRooted(raw))
+                    continue;
+                string seg = raw;
+                foreach (char c in Path.GetInvalidFileNameChars())
+                    seg = seg.Replace(c, '_');
+                if (seg.Length > 0)
+                    segments.Add(seg);
+            }
+            string path = Path.GetFullPath(Path.Combine(cacheDir, Path.Combine(segments.ToArray())));
+            string root = Path.GetFullPath(cacheDir) + Path.DirectorySeparatorChar;
+            if (!path.StartsWith(root, StringComparison.Ordinal))
+                throw new Exception("Refusing to write outside the cache directory");
+            return path;
+        }
+
+        /// <summary>
+        /// Reject non-http(s) URLs (e.g. file://) before fetching.
+        /// </summary>
+        private static string ValidateUrl(string url)
+        {
+            if (!Uri.TryCreate(url, UriKind.Absolute, out Uri? uri) ||
+                (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+                throw new Exception("Refusing non-http(s) URL: " + url);
+            return url;
+        }
+
+        /// <summary>
         /// Download a file and save it to the cache directory
         /// if it already exists, return the cached file
         /// </summary>
@@ -40,9 +79,7 @@ namespace MinecraftThroughTime
         private byte[] InternalDownload(string url)
         {
             //workaround to cache server jars as they are all called server.jar
-            string urli = url.Replace("https:", "").Replace("http:", "").Replace(":", " ").Replace("/", " ").Replace("?", "").Replace("&", "").Replace("=", "");
-
-            string path = Path.Combine(cacheDir, Path.Combine(urli.Split(" ")));
+            string path = CachePath(url);
 
             //make folder
             string? folder = Path.GetDirectoryName(path) ?? throw new Exception("Invalid path");
@@ -50,7 +87,7 @@ namespace MinecraftThroughTime
             {
                 Directory.CreateDirectory(folder);
             }
-            
+
             //if exists, return read
             if (File.Exists(path))
             {
@@ -58,7 +95,7 @@ namespace MinecraftThroughTime
             }
 
             //else download and save
-            byte[] data = Client.GetByteArrayAsync(url).Result;
+            byte[] data = Client.GetByteArrayAsync(ValidateUrl(url)).Result;
             File.WriteAllBytes(path, data);
             return data;
         }
@@ -70,8 +107,7 @@ namespace MinecraftThroughTime
         /// <returns>true/false</returns>
         public bool ExistsLocal(string url)
         {
-            string urli = url.Replace("https:", "").Replace("http:", "").Replace(":", " ").Replace("/", " ").Replace("?", "").Replace("&", "").Replace("=", "");
-            string path = Path.Combine(cacheDir, Path.Combine(urli.Split(" ")));
+            string path = CachePath(url);
             return File.Exists(path);
         }
 
@@ -128,8 +164,11 @@ namespace MinecraftThroughTime
         /// <returns>path to file</returns>
         public string DownloadFresh(string url)
         {
-            byte[] data = Client.GetByteArrayAsync(url).Result;
-            string path = Path.Combine(cacheDir, Path.Combine(url.Replace("https:", "").Replace("http:", "").Replace(":", " ").Replace("/", " ").Replace("?", "").Replace("&", "").Replace("=", "").Split(" ")));
+            byte[] data = Client.GetByteArrayAsync(ValidateUrl(url)).Result;
+            string path = CachePath(url);
+            string? folder = Path.GetDirectoryName(path) ?? throw new Exception("Invalid path");
+            if (!Directory.Exists(folder))
+                Directory.CreateDirectory(folder);
             File.WriteAllBytes(path, data);
             return path;
         }
