@@ -232,7 +232,21 @@ namespace MinecraftThroughTime
             //if no version found throw error
             Console.WriteLine("No server jar found for version");
             Program.Exit(1);
-            //for compiler 
+            //for compiler
+            return "";
+        }
+
+        /// <summary>
+        /// Get the expected server-jar SHA1 for a version from the profile ("" if none).
+        /// </summary>
+        public static string getServerSha1(string version, string profile)
+        {
+            MTTProfile mttProfile = GetProfile(profile);
+            for (int i = 0; i < mttProfile.Entries.Count; i++)
+            {
+                if (mttProfile.Entries[i].Version == version)
+                    return mttProfile.Entries[i].Sha1;
+            }
             return "";
         }
 
@@ -255,6 +269,26 @@ namespace MinecraftThroughTime
 
             //download server jar
             cDL.Download(serverJarUrl, serverJar);
+
+            //verify integrity against the profile's official SHA1 (Log4Shell-era
+            //jars are fetched over the network; a mismatch means tampering/MITM).
+            string expectedSha1 = getServerSha1(version, profile);
+            if (expectedSha1 != "")
+            {
+                string actualSha1 = CDL.GetSha1(File.ReadAllBytes(serverJar));
+                if (!string.Equals(actualSha1, expectedSha1, StringComparison.OrdinalIgnoreCase))
+                {
+                    try { File.Delete(serverJar); } catch { /* best effort */ }
+                    Console.WriteLine($"Server jar SHA1 mismatch for {version}: expected {expectedSha1}, got {actualSha1}. Aborting.");
+                    Program.Exit(1);
+                    return;
+                }
+                Console.WriteLine("Server jar SHA1 verified.");
+            }
+            else
+            {
+                Console.WriteLine("Warning: no SHA1 recorded in profile for " + version + "; skipping integrity check.");
+            }
 
             //log4j fix
             L4JF(version, serverJar);
@@ -279,30 +313,53 @@ namespace MinecraftThroughTime
 
             string param = "";
 
-            //if 1.17 use command line fix
-            if (version == "1.17")
+            // Log4Shell (CVE-2021-44228) mitigations, per Mojang guidance. Matched
+            // by parsed version RANGES so every affected point release is covered
+            // (the old exact-string lists missed e.g. 1.12.1, 1.14.4, 1.15.2, and
+            // 1.17.1–1.18.1 entirely). Non-release ids (snapshots) are left alone.
+            if (TryParseRelease(version, out int minor, out int patch))
             {
-                param = "-Dlog4j2.formatMsgNoLookups=true";
-            }
-
-            //1.12-1.16.5 use log4j fix
-            if (version == "1.12" || version == "1.13" || version == "1.14" || version == "1.15" || version == "1.16" || version == "1.16.1" || version == "1.16.2" || version == "1.16.3" || version == "1.16.4" || version == "1.16.5")
-            {
-                param = " -Dlog4j.configurationFile=log4j2_112-116.xml";
-                cDL.Download("https://launcher.mojang.com/v1/objects/02937d122c86ce73319ef9975b58896fc1b491d1/log4j2_112-116.xml", Path.Combine(path, "log4j2_112-116.xml"));
-            }
-
-            //1.7-1.11.2 other file
-            if (version == "1.7" || version == "1.8" || version == "1.9" || version == "1.10" || version == "1.11" || version == "1.11.1" || version == "1.11.2")
-            {
-                param = " -Dlog4j.configurationFile=log4j2_17-111.xml";
-                // Filename must match the -Dlog4j.configurationFile arg above, or
-                // the JVM can't find it and the mitigation silently does nothing.
-                cDL.Download("https://launcher.mojang.com/v1/objects/4bb89a97a66f350bc9f73b3ca8509632682aea2e/log4j2_17-111.xml", Path.Combine(path, "log4j2_17-111.xml"));
+                if (InRange(minor, patch, 7, 0, 11, 2))
+                {
+                    param = " -Dlog4j.configurationFile=log4j2_17-111.xml";
+                    // Filename must match the -Dlog4j.configurationFile arg, or the
+                    // JVM can't find it and the mitigation silently does nothing.
+                    cDL.Download("https://launcher.mojang.com/v1/objects/4bb89a97a66f350bc9f73b3ca8509632682aea2e/log4j2_17-111.xml", Path.Combine(path, "log4j2_17-111.xml"));
+                }
+                else if (InRange(minor, patch, 12, 0, 16, 5))
+                {
+                    param = " -Dlog4j.configurationFile=log4j2_112-116.xml";
+                    cDL.Download("https://launcher.mojang.com/v1/objects/02937d122c86ce73319ef9975b58896fc1b491d1/log4j2_112-116.xml", Path.Combine(path, "log4j2_112-116.xml"));
+                }
+                else if (InRange(minor, patch, 17, 0, 18, 1))
+                {
+                    // 1.17–1.18.1: mitigation is a JVM flag, no config file needed.
+                    param = " -Dlog4j2.formatMsgNoLookups=true";
+                }
             }
 
             //write params to file to be included by server
             File.WriteAllText(Path.Combine(path, "include.txt"), param);
+        }
+
+        /// <summary>Parse a release id "1.&lt;minor&gt;[.&lt;patch&gt;]" (not snapshots).</summary>
+        private static bool TryParseRelease(string version, out int minor, out int patch)
+        {
+            minor = 0;
+            patch = 0;
+            string[] parts = version.Split('.');
+            if (parts.Length < 2 || parts[0] != "1" || !int.TryParse(parts[1], out minor))
+                return false;
+            if (parts.Length >= 3 && !int.TryParse(parts[2], out patch))
+                return false;
+            return true;
+        }
+
+        /// <summary>Inclusive range test on (minor, patch) treated as minor*1000+patch.</summary>
+        private static bool InRange(int minor, int patch, int loMinor, int loPatch, int hiMinor, int hiPatch)
+        {
+            long v = minor * 1000L + patch;
+            return v >= loMinor * 1000L + loPatch && v <= hiMinor * 1000L + hiPatch;
         }
 
     }
