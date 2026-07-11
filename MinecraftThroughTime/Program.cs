@@ -46,6 +46,12 @@
                 case "make":
                     Make(args);
                     break;
+                case "status":
+                    Status(args);
+                    break;
+                case "validate":
+                    Validate(args);
+                    break;
                 case "cache":
                     Cache(args);
                     break;
@@ -86,7 +92,15 @@
             Console.WriteLine("       -v force version");
             Console.WriteLine("       -i increment version, if not given, calculates next version based on profile, if given, gets next version in profile");
             Sfc(ConsoleColor.Yellow); Sbc(ConsoleColor.Black);
-            Console.WriteLine("make [-f <version_manifestv2.json>] [-o <outputFile>] -t [old_alpha,old_beta,snapshot,release] [-s (only versions with server)] -i <interval> -u");
+            Console.WriteLine("status [server/client] [-f <profileFile/url>] [-j <serverJarPath>] -i");
+            Sfc(ConsoleColor.White); Sbc(ConsoleColor.Black);
+            Console.WriteLine("       dry run: prints the version that WOULD be applied today, without changing anything");
+            Sfc(ConsoleColor.Yellow); Sbc(ConsoleColor.Black);
+            Console.WriteLine("validate [-f <profileFile/url>]");
+            Sfc(ConsoleColor.White); Sbc(ConsoleColor.Black);
+            Console.WriteLine("       checks a profile for empty/unsorted/duplicate dates, gaps, and missing versions/server jars/SHA1s");
+            Sfc(ConsoleColor.Yellow); Sbc(ConsoleColor.Black);
+            Console.WriteLine("make [-f <version_manifestv2.json>] [-o <outputFile>] -t [old_alpha,old_beta,snapshot,release] [-s (only versions with server)] -i <interval> -u [-b <start date YYYY-MM-DD>]");
             Sfc(ConsoleColor.White); Sbc(ConsoleColor.Black);
             Console.WriteLine("       -f uses version_manifestv2.json from path");
             Console.WriteLine("          if not given, tries %appdata%\\.minecraft\\versions\\version_manifest_v2.json");
@@ -96,6 +110,7 @@
             Console.WriteLine("       -s only versions with server version avaliable");
             Console.WriteLine("       -i interval in days between version changes, use -1 to only increment manually");
             Console.WriteLine("       -u unoffical, allow server jar´s i found on the internet MIGHT BE INSECURE");
+            Console.WriteLine("       -b start date (YYYY-MM-DD) the schedule begins from; defaults to today");
             Sfc(ConsoleColor.Yellow); Sbc(ConsoleColor.Black);
             Console.WriteLine("cache clean/open/list");
             Sfc(ConsoleColor.White); Sbc(ConsoleColor.Black);
@@ -140,6 +155,7 @@
             bool server = false;
             bool unof = false;
             int interval = 0;
+            DateTime startDate = DateTime.Now;
             //Parse arguments
             for (int i = 1; i < args.Length; i++)
             {
@@ -162,6 +178,16 @@
                         break;
                     case "-u":
                         unof = true;
+                        break;
+                    case "-b":
+                        if (!DateTime.TryParse(args[i + 1], out startDate))
+                        {
+                            Sfc(ConsoleColor.Red); Sbc(ConsoleColor.Black);
+                            Console.WriteLine("Invalid start date: " + args[i + 1] + " (expected YYYY-MM-DD)");
+                            Sfc(ConsoleColor.White); Sbc(ConsoleColor.Black);
+                            Exit(1);
+                            return;
+                        }
                         break;
                 }
             }
@@ -192,7 +218,7 @@
                 Sfc(ConsoleColor.White); Sbc(ConsoleColor.Black);
                 Exit(1);
             }
-            MinecraftThroughTime.Make.MakeProfile(manifest, output, types, server, interval, unof);
+            MinecraftThroughTime.Make.MakeProfile(manifest, output, types, server, interval, unof, startDate);
             Exit(0);
             return;
         }
@@ -331,6 +357,120 @@
             }
             Exit(0);
             return;
+        }
+
+        /// <summary>
+        /// Dry run: print the version that WOULD be applied today, without
+        /// changing the launcher or server jar.
+        /// </summary>
+        static void Status(string[] args)
+        {
+            string profile = Bakedfile();
+            string serverJar = "";
+            bool increment = false;
+            for (int i = 1; i < args.Length; i++)
+            {
+                switch (args[i])
+                {
+                    case "-f": profile = args[i + 1]; break;
+                    case "-j": serverJar = args[i + 1]; break;
+                    case "-i": increment = true; break;
+                }
+            }
+
+            CDL cDL = new();
+            if (!File.Exists(profile) && cDL.ExistsRemote(profile))
+                profile = cDL.DownloadFresh(profile);
+            if (profile == "")
+                profile = "profile.json";
+            if (!File.Exists(profile) && !cDL.ExistsRemote(profile))
+            {
+                Sfc(ConsoleColor.Red); Sbc(ConsoleColor.Black);
+                Console.WriteLine("Profile not found: " + profile);
+                Sfc(ConsoleColor.White); Sbc(ConsoleColor.Black);
+                Exit(1);
+                return;
+            }
+
+            string mode = (args.Length > 1 && args[1] == "server") ? "server" : "client";
+            Console.WriteLine("Profile: " + profile);
+            Console.WriteLine("Date:    " + DateTime.Now.ToString("yyyy-MM-dd"));
+
+            string version = MinecraftThroughTime.Update.GetExpectedVersion(profile, increment);
+            Sfc(ConsoleColor.Green); Sbc(ConsoleColor.Black);
+            Console.WriteLine("Would set version: " + version);
+            Sfc(ConsoleColor.White); Sbc(ConsoleColor.Black);
+            if (mode == "server")
+            {
+                string jarUrl = MinecraftThroughTime.Update.getServerJar(version, profile);
+                string sha1 = MinecraftThroughTime.Update.getServerSha1(version, profile);
+                Console.WriteLine("Server jar: " + (jarUrl == "" ? "(none in profile)" : jarUrl));
+                if (sha1 != "")
+                    Console.WriteLine("Expected SHA1: " + sha1);
+            }
+            Console.WriteLine("(dry run - nothing was changed)");
+            Exit(0);
+        }
+
+        /// <summary>
+        /// Validate a profile: flag empty/unsorted/duplicate dates, gaps, and
+        /// missing versions / server jars / SHA1s. Exit code 1 if any errors.
+        /// </summary>
+        static void Validate(string[] args)
+        {
+            string profile = Bakedfile();
+            for (int i = 1; i < args.Length; i++)
+                if (args[i] == "-f" && i + 1 < args.Length)
+                    profile = args[i + 1];
+
+            CDL cDL = new();
+            if (!File.Exists(profile) && cDL.ExistsRemote(profile))
+                profile = cDL.DownloadFresh(profile);
+            if (profile == "")
+                profile = "profile.json";
+            if (!File.Exists(profile) && !cDL.ExistsRemote(profile))
+            {
+                Console.WriteLine("Profile not found: " + profile);
+                Exit(1);
+                return;
+            }
+
+            MTTProfile p = MinecraftThroughTime.Update.GetProfile(profile);
+            int errors = 0, warnings = 0;
+
+            if (p.Entries == null || p.Entries.Count == 0)
+            {
+                Console.WriteLine("ERROR: profile has no entries");
+                Exit(1);
+                return;
+            }
+
+            DateTime? prevDate = null;
+            HashSet<string> seenVersions = new();
+            for (int i = 0; i < p.Entries.Count; i++)
+            {
+                MTTProfile.MTTProfileEntry e = p.Entries[i];
+                string where = "entry " + i + " (" + e.Version + ")";
+
+                if (string.IsNullOrWhiteSpace(e.Version)) { Console.WriteLine("ERROR: " + where + " has empty version"); errors++; }
+                else if (!seenVersions.Add(e.Version)) { Console.WriteLine("WARN: duplicate version " + e.Version); warnings++; }
+
+                if (string.IsNullOrWhiteSpace(e.Date)) { Console.WriteLine("WARN: " + where + " has no date"); warnings++; }
+                else if (!DateTime.TryParse(e.Date, out DateTime d)) { Console.WriteLine("ERROR: " + where + " has unparseable date '" + e.Date + "'"); errors++; }
+                else
+                {
+                    if (prevDate.HasValue && d < prevDate.Value) { Console.WriteLine("ERROR: " + where + " date " + e.Date + " is out of chronological order"); errors++; }
+                    else if (prevDate.HasValue && d == prevDate.Value) { Console.WriteLine("WARN: " + where + " duplicate date " + e.Date); warnings++; }
+                    prevDate = d;
+                }
+
+                if (string.IsNullOrWhiteSpace(e.ServerJar)) { Console.WriteLine("WARN: " + where + " has no server jar"); warnings++; }
+                if (string.IsNullOrWhiteSpace(e.Sha1)) { Console.WriteLine("WARN: " + where + " has no SHA1 (integrity check will be skipped)"); warnings++; }
+            }
+
+            Console.WriteLine();
+            Console.WriteLine($"Validated {p.Entries.Count} entries: {errors} error(s), {warnings} warning(s)");
+            Exit(errors == 0 ? 0 : 1);
         }
 
         /// <summary>

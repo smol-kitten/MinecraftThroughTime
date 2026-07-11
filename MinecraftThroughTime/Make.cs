@@ -17,7 +17,7 @@ namespace MinecraftThroughTime
         /// <param name="server">only include versions with server jars</param>
         /// <param name="interval">interval between versions in days, -1 for no interval</param>
         /// <param name="allowUnofficial">allow unofficial server jars</param>
-        public static void MakeProfile(string manifest, string output, string types, bool server, int interval, bool allowUnofficial = false)
+        public static void MakeProfile(string manifest, string output, string types, bool server, int interval, bool allowUnofficial = false, DateTime? startDate = null)
         {
             Vmv2 vm = new();
             CDL cDL = new();
@@ -55,7 +55,7 @@ namespace MinecraftThroughTime
             //sort by "releaseTime": "2011-07-07T22:00:00+00:00", ASC
             vm.Versions.Sort((x, y) => x.ReleaseTime.CompareTo(y.ReleaseTime));
 
-            MTTProfile mttProfile = MakeMTTProfile(ref vm, types, server, interval, allowUnofficial);
+            MTTProfile mttProfile = MakeMTTProfile(ref vm, types, server, interval, allowUnofficial, startDate ?? DateTime.Now);
             json = JsonSerializer.Serialize(mttProfile);
             File.WriteAllText(output, json);
 
@@ -78,14 +78,14 @@ namespace MinecraftThroughTime
         /// <param name="interval">interval between versions in days, -1 for no interval</param>
         /// <param name="allowUnofficial">allow unofficial server jars</param>
         /// <returns></returns>
-        public static MTTProfile MakeMTTProfile(ref Vmv2 vm, string types, bool server, int interval, bool allowUnofficial)
+        public static MTTProfile MakeMTTProfile(ref Vmv2 vm, string types, bool server, int interval, bool allowUnofficial, DateTime? startDate = null)
         {
             MTTProfile profile = new();
 
             string[] AllowedTypes = types.Split(",");
 
-            profile.StartDate = DateTime.Now.ToString("yyyy-MM-dd");
-            DateTime Date = DateTime.Now;
+            DateTime Date = startDate ?? DateTime.Now;
+            profile.StartDate = Date.ToString("yyyy-MM-dd");
             profile.Interval = interval;
 
             MTTProfileEntry met;
