@@ -57,6 +57,12 @@ namespace MinecraftThroughTime
                 }
 
                 //increment version index by 1 and return version
+                if (index + 1 >= mttProfile.Entries.Count)
+                {
+                    Console.WriteLine("Already at the last version in the profile");
+                    Program.Exit(1);
+                    return "";
+                }
                 return mttProfile.Entries[index + 1].Version;
             }
 
@@ -149,6 +155,12 @@ namespace MinecraftThroughTime
                 }
 
                 //increment version index by 1 and return version
+                if (index + 1 >= mttProfile.Entries.Count)
+                {
+                    Console.WriteLine("Already at the last version in the profile");
+                    Program.Exit(1);
+                    return "";
+                }
                 return mttProfile.Entries[index + 1].Version;
             }
 
@@ -284,7 +296,9 @@ namespace MinecraftThroughTime
             if (version == "1.7" || version == "1.8" || version == "1.9" || version == "1.10" || version == "1.11" || version == "1.11.1" || version == "1.11.2")
             {
                 param = " -Dlog4j.configurationFile=log4j2_17-111.xml";
-                cDL.Download("https://launcher.mojang.com/v1/objects/4bb89a97a66f350bc9f73b3ca8509632682aea2e/log4j2_17-111.xml", Path.Combine(path, "log4j2_7-112.xml"));
+                // Filename must match the -Dlog4j.configurationFile arg above, or
+                // the JVM can't find it and the mitigation silently does nothing.
+                cDL.Download("https://launcher.mojang.com/v1/objects/4bb89a97a66f350bc9f73b3ca8509632682aea2e/log4j2_17-111.xml", Path.Combine(path, "log4j2_17-111.xml"));
             }
 
             //write params to file to be included by server
