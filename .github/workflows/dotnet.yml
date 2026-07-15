@@ -34,7 +34,7 @@ jobs:
 
     - name: Publish self-contained
       if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-      run: dotnet publish -c Release --output ./Release --runtime win-x86 --self-contained true -p:PublishSingleFile=true -p:EnableWindowsTargeting=true
+      run: dotnet publish -c Release --output ./Release --runtime win-x86 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true -p:EnableWindowsTargeting=true -p:DebugType=none -p:DebugSymbols=false
 
     - name: Upload build artifacts
       if: github.event_name == 'push' && github.ref == 'refs/heads/master'
