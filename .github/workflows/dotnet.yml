@@ -49,7 +49,6 @@ jobs:
     - name: Upload build artifacts
       if: github.event_name == 'push' && github.ref == 'refs/heads/master'
       uses: actions/upload-artifact@v7
-          retention-days: 3
       continue-on-error: true  # tolerate artifact storage-quota failures
       with:
         name: MinecraftThroughTime
