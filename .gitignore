@@ -364,3 +364,10 @@ FodyWeavers.xsd
 *.jar
 .vscode/tasks.json
 .vscode/launch.json
+# Claude tooling local state (generated docs under .claude/wiki are tracked)
+.claude/.wiki_ingest.stamp
+.claude/.wiki_last_commit
+.claude/.docsync.json
+.claude/.docsync.stamp
+.claude/readme-index.json
+.claude/dbmap.json
