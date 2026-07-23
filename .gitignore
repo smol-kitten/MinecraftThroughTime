@@ -371,3 +371,5 @@ FodyWeavers.xsd
 .claude/.docsync.stamp
 .claude/readme-index.json
 .claude/dbmap.json
+# per-machine tooling scratch (stamps/caches) — auto-generated, never committed
+.claude/.wiki_ingest_queue
