@@ -179,65 +179,39 @@ namespace MinecraftThroughTime
     public class Bake
     {
         /// <summary>
-        /// Bake a profile(path/url) into the exe
+        /// Bake a profile(path/url) into a copy of the exe
         /// </summary>
         /// <param name="urlOrPath">path to bake (max. 512 chars)</param>
-        /// <returns>true/false</returns>
-        public static bool BakeProfile(string urlOrPath)
+        /// <param name="exePath">exe to copy, defaults to the running exe</param>
+        /// <returns>path of the baked exe copy, null on failure</returns>
+        /// <remarks>
+        /// The copy is byte-identical to the exe (so a signed exe stays signed);
+        /// the profile goes into the sidecar file next to it, see <see cref="BakedProfile"/>
+        /// </remarks>
+        public static string? BakeProfile(string urlOrPath, string? exePath = null)
         {
             //if more than 512 bytes, return false
             if(urlOrPath.Length > 512)
-                return false;
+                return null;
 
-            //copy self with "_baked" suffix
-            string? path = Environment.ProcessPath;
-            if (path == null)
-                return false;
-
-            string ext = Path.GetExtension(path);
-            string newPath = path.Replace(ext, "_PathBaked" + ext);
-
-            if (File.Exists(newPath))
-                File.Delete(newPath);
-            File.Copy(path, newPath);
-
-            //write the path into the exe
-            byte[] data = System.Text.Encoding.UTF8.GetBytes("[MTT]"+urlOrPath);
-
-            //write the url into the exe
-            using FileStream fs = new(newPath, FileMode.Open, FileAccess.Write);
-            fs.Seek(0, SeekOrigin.End);
-            fs.Write(data, 0, data.Length);
-
-            return true;
+            return Write(exePath, "_PathBaked", BakedProfile.PathPayload(urlOrPath));
         }
 
         /// <summary>
-        /// Bake a profile(path/url) COMPLETELY into the exe
+        /// Bake a profile(path/url) COMPLETELY into a copy of the exe
         /// </summary>
-        /// <param name="urlOrPath">path to file to bake into the exe (max. 512 chars)</param>
-        /// <returns>true/false</returns>
+        /// <param name="urlOrPath">path to file to bake (max. 512 chars)</param>
+        /// <param name="exePath">exe to copy, defaults to the running exe</param>
+        /// <returns>path of the baked exe copy, null on failure</returns>
         /// <remarks>
-        /// This will download and cache the file and write it into the exe
+        /// This will download and cache the file and write it into the sidecar file
         /// If the file is larger than int32.maxvalue, it will fail
         /// </remarks>
-        public static bool BakeFully(string urlOrPath)
+        public static string? BakeFully(string urlOrPath, string? exePath = null)
         {
             //if more than 512 bytes, return false
             if(urlOrPath.Length > 512)
-                return false;
-
-            //copy self with "_baked" suffix
-            string? path = Environment.ProcessPath;
-            if (path == null)
-                return false;
-
-            string ext = Path.GetExtension(path);
-            string newPath = path.Replace(ext, "_FullyBaked" + ext);
-
-            if (File.Exists(newPath))
-                File.Delete(newPath);
-            File.Copy(path, newPath);
+                return null;
 
             CDL cDL = new();
 
@@ -248,22 +222,29 @@ namespace MinecraftThroughTime
                 if(File.Exists(urlOrPath))
                     rawdata = File.ReadAllBytes(urlOrPath);
                 else
-                    return false;
+                    return null;
 
-            //write the path into the exe
-            byte[] data = System.Text.Encoding.UTF8.GetBytes("[MTT]");
-            data = data.Concat(rawdata).ToArray();
-            data = data.Concat(System.Text.Encoding.UTF8.GetBytes("[MTTDL]")).ToArray();
-            data = data.Concat(BitConverter.GetBytes(rawdata.Length)).ToArray();
-            data = data.Concat(System.Text.Encoding.UTF8.GetBytes("[MTTFBP]")).ToArray();
+            return Write(exePath, "_FullyBaked", BakedProfile.FullPayload(rawdata));
+        }
 
+        /// <summary>
+        /// Copy the exe with a suffix and write the payload to the copy's sidecar file
+        /// </summary>
+        static string? Write(string? exePath, string suffix, byte[] payload)
+        {
+            string? path = exePath ?? Environment.ProcessPath;
+            if (path == null)
+                return null;
 
-            //write the url into the exe
-            using FileStream fs = new(newPath, FileMode.Open, FileAccess.Write);
-            fs.Seek(0, SeekOrigin.End);
-            fs.Write(data, 0, data.Length);
+            string newPath = Path.Combine(Path.GetDirectoryName(path) ?? "", Path.GetFileNameWithoutExtension(path) + suffix + Path.GetExtension(path));
 
-            return true;
+            if (File.Exists(newPath))
+                File.Delete(newPath);
+            File.Copy(path, newPath);
+
+            File.WriteAllBytes(BakedProfile.SidecarPath(newPath), payload);
+
+            return newPath;
         }
     }
 

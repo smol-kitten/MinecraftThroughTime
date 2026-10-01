@@ -60,7 +60,8 @@
                     break;
                 case "help":
                     Help();
-                    break;
+                    Exit(0);
+                    return;
                 default:
                     Console.WriteLine("Invalid arguments. Use 'help' to get a list of commands");
                     break;
@@ -120,8 +121,9 @@
             Sfc(ConsoleColor.Yellow); Sbc(ConsoleColor.Black);
             Console.WriteLine("bake <url/path> [full]");
             Sfc(ConsoleColor.White); Sbc(ConsoleColor.Black);
-            Console.WriteLine("       Bakes a profile path or url into the executable");
+            Console.WriteLine("       Bakes a profile path or url into a copy of the executable");
             Console.WriteLine("       Usefull for portable applications");
+            Console.WriteLine("       The profile is stored in a .mttprofile file next to the copy, keep both together");
             Console.WriteLine("       Currently only path to a profile not full profile.");
             Console.WriteLine("       Use 'full' to bake full profile instead of just path");
             Console.WriteLine("");
@@ -547,12 +549,13 @@
             bool fully = (args.Length >= 3) ? (args[2] == "full") ? true : false : false;
             if (File.Exists(path) || (Uri.IsWellFormedUriString(path, UriKind.Absolute) && cDL.ExistsRemote(path)))
             {
-                bool r = (args.Length >= 3) ? MinecraftThroughTime.Bake.BakeFully(path) : MinecraftThroughTime.Bake.BakeProfile(path);
-                if (r)
+                string? r = fully ? MinecraftThroughTime.Bake.BakeFully(path) : MinecraftThroughTime.Bake.BakeProfile(path);
+                if (r != null)
                 {
                     Sfc(ConsoleColor.Green); Sbc(ConsoleColor.Black);
-                    Console.WriteLine("Profile baked");
+                    Console.WriteLine("Profile baked: " + r);
                     Sfc(ConsoleColor.White); Sbc(ConsoleColor.Black);
+                    Console.WriteLine("Profile stored in " + BakedProfile.SidecarPath(r) + " (copy both files together)");
                     Exit(0);
                     return;
                 }
@@ -576,7 +579,7 @@
         }
 
         /// <summary>
-        /// Load baked file
+        /// Load baked file (sidecar .mttprofile first, then data appended by older versions)
         /// </summary>
         /// <returns>
         /// empty path if not found, path if found in a BakedProfile
@@ -584,105 +587,24 @@
         static string bakedFile = "";
         static string Bakedfile()
         {
-            //if(bakedFile != "") return bakedFile;
             if (bakedFile != "") return bakedFile;
 
             string? path = Environment.ProcessPath;
             if (path == null) return "";
 
-            //Prep filestream
-            FileStream fs = File.OpenRead(path);
-            fs.Seek(0, SeekOrigin.End);
+            BakedProfile.Baked? baked = BakedProfile.Find(path);
+            if (baked == null) return "";
 
-            //if ends with exactly [MTTFBP], then it is a full profil, process with FullyBaked
-            byte[] full = new byte[8];
-            fs.Seek(-8, SeekOrigin.End);
-            _ = fs.Read(full, 0, 8);
-            if (System.Text.Encoding.UTF8.GetString(full) == "[MTTFBP]")
+            //full profile: write the json to a temp file and use that
+            if (baked.Full)
             {
-                fs.Close();
-                return FullyBaked();
+                string temp = Path.GetTempFileName();
+                File.WriteAllText(temp, baked.Value);
+                bakedFile = temp;
             }
-
-            //Reset to end
-            fs.Seek(0, SeekOrigin.End);
-
-            //read backwards till [MTT], example [MTT]C:\Users\user\profile.json. This is the baked file(path)
-            //path max 512 + 5, stop if not found in 517 bytes
-            byte[] buffer;
-            int read;
-            string str = "";
-            for (int i = 0; i < 517; i++)
-            {
-                //read until [ or max
-                fs.Seek(-i, SeekOrigin.End);
-                if (fs.ReadByte() == 91)
-                {
-                    if (fs.ReadByte() == 77 && fs.ReadByte() == 84 && fs.ReadByte() == 84 && fs.ReadByte() == 93)
-                    {
-                        //found [MTT],set buffer size to length without [MTT]
-                        buffer = new byte[i - 5];
-                        fs.Seek(-i + 5, SeekOrigin.End);
-                        read = fs.Read(buffer, 0, i - 5);
-                        str = System.Text.Encoding.UTF8.GetString(buffer, 0, read);
-                        fs.Close();
-                        bakedFile = str;
-                        return str;
-                    }
-                }
-            }
-            Console.WriteLine(str);
-            return "";
-        }
-
-        /// <summary>
-        /// Read full profile from baked file
-        /// <executable binary>[MTT]<jsonstring>[MTTDL]<int32>[MTTFBP]
-        /// </summary>
-        /// <returns>
-        ///     BakedProfile with FullProfile set to true and Data in form of Raw Json string
-        /// </returns>
-        static string FullyBaked()
-        {
-            string? path = Environment.ProcessPath;
-            if (path == null) return "";
-
-            //Prep filestream
-            FileStream fs = File.OpenRead(path);
-            fs.Seek(0, SeekOrigin.End);
-
-            //Reset to end
-            fs.Seek(0, SeekOrigin.End);
-
-            //Offset DATALENGTH, 2 bytes for int32, 8 bytes for [MTTFBP]
-            int LEN_DATALENGTH = 2;
-            int LEN_INT32 = 4;
-            int LEN_MTTFBP = 8;
-            int endoffset = LEN_DATALENGTH + LEN_INT32 + LEN_MTTFBP;
-
-            //read backwards in between [MTT] and [MTTDL]<int32>[MTTFBP]
-            //flexible length, read int32 for buffer size
-            byte[] buffer;
-            int read;
-            byte[] intbuffer = new byte[4];
-            fs.Seek(-(LEN_INT32 + LEN_MTTFBP), SeekOrigin.End);
-            _ = fs.Read(intbuffer, 0, 4);
-
-            //update buffer size to read length
-            int size = BitConverter.ToInt32(intbuffer, 0);
-
-            //get data, offset from end = endoffset + size
-            buffer = new byte[size];
-            fs.Seek(-endoffset - size, SeekOrigin.End);
-            read = fs.Read(buffer, 0, size);
-            string data = System.Text.Encoding.UTF8.GetString(buffer, 0, read);
-            fs.Close();
-
-
-            //Make temp file
-            string temp = Path.GetTempFileName();
-            File.WriteAllText(temp, data);
-            return temp;
+            else
+                bakedFile = baked.Value;
+            return bakedFile;
         }
     }
 }
