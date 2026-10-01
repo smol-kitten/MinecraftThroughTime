@@ -42,9 +42,12 @@ jobs:
     - name: Build
       run: dotnet build -c Release --no-restore -p:EnableWindowsTargeting=true
 
+    - name: Test
+      run: dotnet test -c Release --no-build
+
     - name: Publish self-contained
       if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-      run: dotnet publish -c Release --output ./Release --runtime win-x86 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true -p:EnableWindowsTargeting=true -p:DebugType=none -p:DebugSymbols=false
+      run: dotnet publish MinecraftThroughTime/MinecraftThroughTime.csproj -c Release --output ./Release --runtime win-x86 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true -p:EnableWindowsTargeting=true -p:DebugType=none -p:DebugSymbols=false
 
     - name: Upload build artifacts
       if: github.event_name == 'push' && github.ref == 'refs/heads/master'
