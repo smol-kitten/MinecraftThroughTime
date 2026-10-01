@@ -100,7 +100,10 @@ jobs:
           set -euo pipefail
           mkdir -p pki
           for c in r0 cb0 t0; do
-            curl -fsS -m 20 --retry 3 --retry-all-errors -A "mtt-ci/1" -o "pki/$c.crt" "http://pki.catboy.systems/certs/$c.crt"
+            curl -fsS -m 20 --retry 3 --retry-all-errors -A "mtt-ci/1" -o "pki/$c.der" "http://pki.catboy.systems/certs/$c.crt"
+            # served as DER; osslsigncode (and the release's r0.crt) use PEM
+            openssl x509 -inform DER -in "pki/$c.der" -out "pki/$c.crt" 2>/dev/null || openssl x509 -in "pki/$c.der" -out "pki/$c.crt"
+            rm "pki/$c.der"
           done
           fp=$(openssl x509 -in pki/r0.crt -outform DER | sha256sum | cut -c1-64)
           [ "$fp" = "$R0_SHA256" ] || { echo "::error::r0.crt sha256 $fp is not the pinned $R0_SHA256"; exit 1; }
@@ -134,7 +137,12 @@ jobs:
       - name: osslsigncode on this runner
         if: needs.sign.outputs.signed == 'true'
         run: |
-          command -v osslsigncode >/dev/null || { echo "::error::osslsigncode missing on this runner"; exit 1; }
+          # same fallback as catboy-sign: not every runner in the pool carries it in its image
+          if ! command -v osslsigncode >/dev/null; then
+            echo "::warning::osslsigncode missing on this runner, installing"
+            sudo -n apt-get install -y -qq osslsigncode >/dev/null 2>&1 || { sudo -n apt-get update -qq && sudo -n apt-get install -y -qq osslsigncode; } || apt-get install -y -qq osslsigncode || true
+          fi
+          command -v osslsigncode >/dev/null || { echo "::error::osslsigncode not available on this runner"; exit 1; }
           osslsigncode --version | head -1 | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Verify every signed file against the pinned R0
         if: needs.sign.outputs.signed == 'true'
