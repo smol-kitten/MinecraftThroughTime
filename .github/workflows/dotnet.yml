@@ -3,6 +3,7 @@ name: .NET Build
 on:
   push:
     branches: [ "master" ]
+    tags: [ 'v*' ]
   pull_request:
     branches: [ "master" ]
     paths-ignore:
@@ -18,6 +19,14 @@ permissions:
 concurrency:
   group: '${{ github.workflow }}-${{ github.ref }}'
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# Release chain (README "Signed releases"):
+#   build → sign (catboy-sign) → verify-signed (osslsigncode vs pinned R0) → verify-windows (Authenticode, start, bake) → release
+# catboy-sign signs on tags only (gate 1 otherwise): master pushes pass the same files through unsigned,
+# and verify-windows still proves the exe starts and bakes.
+env:
+  # staging R0 (Marc Schneider Root CA R0 (Staging)), public fact; pinned by catboy-sign
+  R0_SHA256: ed5eaa1b7a66e154e8c82a3d45f65ddd36a3fbbad1f41a68d2bf4334ccc2d375
 
 jobs:
   build:
@@ -46,14 +55,240 @@ jobs:
       run: dotnet test -c Release --no-build
 
     - name: Publish self-contained
-      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-      run: dotnet publish MinecraftThroughTime/MinecraftThroughTime.csproj -c Release --output ./Release --runtime win-x86 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true -p:EnableWindowsTargeting=true -p:DebugType=none -p:DebugSymbols=false
+      if: github.event_name == 'push'
+      run: |
+        ver=1.0.0
+        case "$GITHUB_REF" in refs/tags/v*) ver=${GITHUB_REF_NAME#v} ;; esac
+        rm -rf ./Release
+        dotnet publish MinecraftThroughTime/MinecraftThroughTime.csproj -c Release --output ./Release --runtime win-x86 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true -p:EnableWindowsTargeting=true -p:DebugType=none -p:DebugSymbols=false -p:Version="$ver"
+        ls -la ./Release ./Release/Examples
 
     - name: Upload build artifacts
-      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+      if: github.event_name == 'push'
       uses: actions/upload-artifact@v7
-      continue-on-error: true  # tolerate artifact storage-quota failures
+      continue-on-error: ${{ !startsWith(github.ref, 'refs/tags/v') }}  # tolerate artifact storage-quota failures, except for a release
       with:
         name: MinecraftThroughTime
         path: ./Release/
         retention-days: 7
+
+  sign:
+    if: github.event_name == 'push'
+    needs: build
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    uses: workcollection/fleet-actions/.github/workflows/catboy-sign.yml@v2.1.6
+    with:
+      artifact-name: MinecraftThroughTime
+      pe-glob: '*.exe'
+      archive-glob: ''
+      runs-on: n4
+      attest: true
+      strict: ${{ startsWith(github.ref, 'refs/tags/v') }}
+
+  verify-signed:
+    # The chain proof on the runner class that signed. tools/verify-release.sh is the recipe the
+    # README gives people for a download. Any file that does not verify fails the job.
+    needs: sign
+    runs-on: n4
+    steps:
+      - uses: actions/checkout@v7
+      - name: Trust anchors (pinned R0 + the TSA chain)
+        run: |
+          set -euo pipefail
+          mkdir -p pki
+          for c in r0 cb0 t0; do
+            curl -fsS -m 20 --retry 3 --retry-all-errors -A "mtt-ci/1" -o "pki/$c.crt" "http://pki.catboy.systems/certs/$c.crt"
+          done
+          fp=$(openssl x509 -in pki/r0.crt -outform DER | sha256sum | cut -c1-64)
+          [ "$fp" = "$R0_SHA256" ] || { echo "::error::r0.crt sha256 $fp is not the pinned $R0_SHA256"; exit 1; }
+          echo "r0.crt sha256 $fp (pinned)"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: pki
+          path: pki/
+          retention-days: 7
+      - name: Nothing to verify on an unsigned run
+        if: needs.sign.outputs.signed != 'true'
+        env:
+          GATE: ${{ needs.sign.outputs.gate }}
+        run: echo "::notice::not signed (gate=$GATE); catboy-sign signs tag builds only"
+      - uses: actions/download-artifact@v7
+        if: needs.sign.outputs.signed == 'true'
+        with:
+          name: ${{ needs.sign.outputs.artifact }}
+          path: signed
+      - uses: actions/download-artifact@v7
+        if: needs.sign.outputs.signed == 'true'
+        with:
+          name: MinecraftThroughTime
+          path: input
+      - name: Signed artifact holds exactly the files that went in
+        if: needs.sign.outputs.signed == 'true'
+        run: |
+          (cd input && find . -type f | sort) > in.txt
+          (cd signed && find . -type f ! -name 'SIGNATURES.md' | sort) > out.txt
+          diff in.txt out.txt || { echo "::error::signed artifact differs from what went in (< only in input, > only in signed)"; exit 1; }
+      - name: osslsigncode on this runner
+        if: needs.sign.outputs.signed == 'true'
+        run: |
+          command -v osslsigncode >/dev/null || { echo "::error::osslsigncode missing on this runner"; exit 1; }
+          osslsigncode --version | head -1 | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Verify every signed file against the pinned R0
+        if: needs.sign.outputs.signed == 'true'
+        run: |
+          set -o pipefail
+          tools/verify-release.sh signed pki | tee verify.log
+          { echo '## verify-signed'; echo; echo '```'; cat verify.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+  verify-windows:
+    # What a Windows user gets: the signature as Windows sees it (staging R0 untrusted → imported into
+    # this throwaway runner's LocalMachine Root → Valid), the exe starts, and a bake keeps the copy signed.
+    needs: [sign, verify-signed]
+    runs-on: windows-latest
+    env:
+      SIGNED: ${{ needs.sign.outputs.signed }}
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: ${{ needs.sign.outputs.artifact }}
+          path: dist
+      - uses: actions/download-artifact@v7
+        with:
+          name: pki
+          path: pki
+      - name: Authenticode as Windows sees it (NotTrusted with a chain to R0 → R0 imported → Valid)
+        if: env.SIGNED == 'true'
+        shell: pwsh
+        run: |
+          $r0 = New-Object Security.Cryptography.X509Certificates.X509Certificate2 (Resolve-Path pki/r0.crt).Path
+          if ($r0.GetCertHashString('SHA256') -ne $env:R0_SHA256) { throw "r0.crt is not the pinned staging R0" }
+          $exe = (Resolve-Path dist/MinecraftThroughTime.exe).Path
+          "## verify-windows`n`n| check | status | signer | timestamp signer |`n|---|---|---|---|" >> $env:GITHUB_STEP_SUMMARY
+          function Check($label, $path, $expect) {
+            $s = Get-AuthenticodeSignature $path
+            $row = "| $label | $($s.Status) | $($s.SignerCertificate.Subject) | $($s.TimeStamperCertificate.Subject) |"
+            Write-Host $row; $row >> $env:GITHUB_STEP_SUMMARY
+            if ($s.Status -notin $expect) { throw "${label}: status $($s.Status) ($($s.StatusMessage)), expected $($expect -join '/')" }
+            if (-not $s.TimeStamperCertificate) { throw "${label}: no timestamp countersignature" }
+            $s
+          }
+          $s = Check 'before R0 import' $exe @('NotTrusted', 'UnknownError')
+          # The chain the signature carries must end at the pinned R0 (only trust in R0 is missing).
+          # Its certificates: PE security directory → WIN_CERTIFICATE (8-byte header) → PKCS#7 SignedData.
+          $pe = [IO.File]::ReadAllBytes($exe)
+          $opt = [BitConverter]::ToInt32($pe, 0x3c) + 24
+          $dd = $opt + $(if ([BitConverter]::ToUInt16($pe, $opt) -eq 0x10b) { 96 } else { 112 }) + 4 * 8
+          $off = [BitConverter]::ToInt32($pe, $dd); $len = [BitConverter]::ToInt32($pe, $dd + 4)
+          $cms = New-Object Security.Cryptography.Pkcs.SignedCms
+          $cms.Decode($pe[($off + 8)..($off + $len - 1)])
+          $chain = New-Object Security.Cryptography.X509Certificates.X509Chain
+          $chain.ChainPolicy.ExtraStore.AddRange($cms.Certificates)
+          $chain.ChainPolicy.ExtraStore.Add($r0) | Out-Null
+          $chain.ChainPolicy.RevocationMode = 'NoCheck'
+          # the leaf is a 1-hour run certificate: its validity is the timestamp's job, not this check's
+          $chain.ChainPolicy.VerificationFlags = 'AllowUnknownCertificateAuthority, IgnoreNotTimeValid'
+          [void]$chain.Build($cms.SignerInfos[0].Certificate)
+          $path = ($chain.ChainElements | ForEach-Object { $_.Certificate.GetNameInfo('SimpleName', $false) }) -join ' → '
+          $top = $chain.ChainElements[$chain.ChainElements.Count - 1].Certificate
+          "chain: $path"; "`nchain: $path`n" >> $env:GITHUB_STEP_SUMMARY
+          if ($top.GetCertHashString('SHA256') -ne $env:R0_SHA256) { throw "chain ends at $($top.Subject), not the pinned R0" }
+          Import-Certificate -FilePath pki/r0.crt -CertStoreLocation Cert:\LocalMachine\Root | Out-Null
+          "| **R0 imported into LocalMachine Root** | | | |" >> $env:GITHUB_STEP_SUMMARY
+          Check 'after R0 import' $exe @('Valid') | Out-Null
+      - name: The exe starts
+        shell: pwsh
+        run: |
+          $out = & dist/MinecraftThroughTime.exe help | Out-String
+          $code = $LASTEXITCODE
+          $out
+          if ($code -ne 0) { throw "help exit $code" }
+          if ($out -notmatch 'update server/client') { throw "help output not recognised" }
+          "`nexe starts: ``help`` exit 0" >> $env:GITHUB_STEP_SUMMARY
+      - name: Bake keeps the copy signed and the sidecar is read
+        shell: pwsh
+        run: |
+          $work = New-Item -ItemType Directory (Join-Path $env:RUNNER_TEMP 'bake')
+          Copy-Item dist/MinecraftThroughTime.exe $work
+          $prof = Join-Path $env:RUNNER_TEMP 'profile.json'
+          '{"version":1,"interval":7,"entries":[{"version":"b1.7.3","date":"2011-07-08","serverJar":"x","sha1":"x"},{"version":"1.0","date":"2011-11-18","serverJar":"x","sha1":"x"},{"version":"1.2.5","date":"2012-04-04","serverJar":"x","sha1":"x"}]}' | Set-Content $prof
+          Push-Location $work   # no profile.json here: only a baked profile can point at the one above
+          & .\MinecraftThroughTime.exe bake $prof
+          if ($LASTEXITCODE -ne 0) { throw "bake exit $LASTEXITCODE" }
+          & .\MinecraftThroughTime.exe bake $prof full
+          if ($LASTEXITCODE -ne 0) { throw "bake full exit $LASTEXITCODE" }
+          foreach ($f in 'MinecraftThroughTime_PathBaked.mttprofile', 'MinecraftThroughTime_FullyBaked.mttprofile') { if (-not (Test-Path $f)) { throw "$f missing" } }
+
+          $orig = (Get-FileHash .\MinecraftThroughTime.exe).Hash
+          "`n### bake`n`n| file | identical to original | validate output | Authenticode |`n|---|---|---|---|" >> $env:GITHUB_STEP_SUMMARY
+          $out = (& .\MinecraftThroughTime.exe validate | Out-String).Trim()
+          if ($out -notmatch 'Profile not found: profile.json') { throw "unbaked exe found a profile: $out" }
+          "| original (no sidecar) | | $out | |" >> $env:GITHUB_STEP_SUMMARY
+          foreach ($name in 'PathBaked', 'FullyBaked') {
+            # the full bake carries the json itself: prove it no longer needs the file
+            if ($name -eq 'FullyBaked') { Remove-Item $prof }
+            $exe = ".\MinecraftThroughTime_$name.exe"
+            $same = (Get-FileHash $exe).Hash -eq $orig
+            if (-not $same) { throw "$exe differs from the original" }
+            $out = (& $exe validate | Out-String).Trim()
+            $code = $LASTEXITCODE
+            $out
+            if ($code -ne 0 -or $out -notmatch 'Validated 3 entries: 0 error') { throw "$exe did not use its sidecar (exit $code)" }
+            $st = if ($env:SIGNED -eq 'true') { (Get-AuthenticodeSignature $exe).Status } else { 'unsigned run' }
+            if ($env:SIGNED -eq 'true' -and $st -ne 'Valid') { throw "$exe Authenticode $st" }
+            "| $name | $same | $(($out -split "`n")[-1]) | $st |" >> $env:GITHUB_STEP_SUMMARY
+          }
+          # What older versions did (append to the exe) for comparison: Windows must reject it.
+          if ($env:SIGNED -eq 'true') {
+            Copy-Item .\MinecraftThroughTime.exe .\legacy.exe
+            $fs = [IO.File]::Open("$work\legacy.exe", 'Append'); $b = [Text.Encoding]::UTF8.GetBytes("[MTT]$prof"); $fs.Write($b, 0, $b.Length); $fs.Close()
+            $st = (Get-AuthenticodeSignature .\legacy.exe).Status
+            "| legacy append (old bake, for comparison) | False | | $st |" >> $env:GITHUB_STEP_SUMMARY
+            if ($st -eq 'Valid') { throw "appended copy still Valid: the sidecar rationale does not hold" }
+          }
+          Pop-Location
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [sign, verify-signed, verify-windows]
+    runs-on: n4
+    permissions:
+      contents: write
+    steps:
+      - name: Signed?
+        env:
+          SIGNED: ${{ needs.sign.outputs.signed }}
+          GATE: ${{ needs.sign.outputs.gate }}
+        run: |
+          echo "signed=$SIGNED gate=$GATE"
+          [ "$SIGNED" = true ] || { echo "::error::a tag release ships signed or not at all"; exit 1; }
+      - uses: actions/download-artifact@v7
+        with:
+          name: ${{ needs.sign.outputs.artifact }}
+          path: rel
+      - uses: actions/download-artifact@v7
+        with:
+          name: pki
+          path: pki
+      - name: Assemble (SHA256SUMS of the signed files, SIGNATURES.md, R0)
+        run: |
+          set -euo pipefail
+          cp pki/r0.crt rel/r0.crt
+          sha=$(sha256sum rel/MinecraftThroughTime.exe | cut -c1-64)
+          grep -q "$sha" rel/SIGNATURES.md || { echo "::error::signed exe hash not in SIGNATURES.md"; exit 1; }
+          (cd rel && sha256sum MinecraftThroughTime.exe Examples/*.bat r0.crt | sed 's#  Examples/#  #') > rel/SHA256SUMS
+          cat rel/SHA256SUMS; ls -laR rel
+      - name: Release
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
+        with:
+          # explicit list: never "everything in the artifact"
+          files: |
+            rel/MinecraftThroughTime.exe
+            rel/SHA256SUMS
+            rel/SIGNATURES.md
+            rel/r0.crt
+            rel/Examples/*.bat
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          generate_release_notes: true
