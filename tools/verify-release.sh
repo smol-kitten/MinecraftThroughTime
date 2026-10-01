@@ -19,13 +19,20 @@ fail=0; ok=0
 pass() { ok=$((ok+1)); echo "ok    $1"; }
 bad()  { fail=$((fail+1)); echo "FAIL  $1"; }
 
-fp=$(openssl x509 -in "$PKI/r0.crt" -outform DER | sha256sum | cut -c1-64)
+tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
+
+# pki.catboy.systems serves DER; osslsigncode reads PEM only (a DER file is silently "no certificate found")
+for c in r0 cb0 t0; do
+  openssl x509 -in "$PKI/$c.crt" -out "$tmp/$c.pem" 2>/dev/null || openssl x509 -inform DER -in "$PKI/$c.crt" -out "$tmp/$c.pem" \
+    || { echo "FAIL  $PKI/$c.crt is not a certificate"; exit 1; }
+done
+
+fp=$(openssl x509 -in "$tmp/r0.pem" -outform DER | sha256sum | cut -c1-64)
 [ "$fp" = "$R0_SHA256" ] || { echo "FAIL  r0.crt fingerprint $fp is not the pinned $R0_SHA256"; exit 1; }
 echo "root  r0.crt sha256 $fp (staging R0)"
 echo "tool  $(osslsigncode --version 2>&1 | head -1)"
 
-tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
-cat "$PKI/r0.crt" "$PKI/cb0.crt" "$PKI/t0.crt" > "$tmp/tsa-ca.pem"
+cat "$tmp/r0.pem" "$tmp/cb0.pem" "$tmp/t0.pem" > "$tmp/tsa-ca.pem"
 
 # CRLs: fetched once per URL with curl (named User-Agent, retries) instead of by osslsigncode, whose own
 # fetches send an empty User-Agent and can fail behind the WAF. Revocation is still checked:
@@ -48,7 +55,7 @@ crls() { # <signed file> → $tmp/crls.pem holds the CRL of every certificate in
 
 while IFS= read -r -d '' f; do
   out=
-  if crls "$f" && out=$(osslsigncode verify -in "$f" -CAfile "$PKI/r0.crt" -TSA-CAfile "$tmp/tsa-ca.pem" \
+  if crls "$f" && out=$(osslsigncode verify -in "$f" -CAfile "$tmp/r0.pem" -TSA-CAfile "$tmp/tsa-ca.pem" \
        -ignore-cdp -CRLfile "$tmp/crls.pem" -TSA-CRLfile "$tmp/crls.pem" 2>&1) \
      && grep -q 'Signature verification: ok' <<<"$out" && ! grep -q 'Timestamp is not available' <<<"$out"; then
     pass "${f#"$DIR"/}  Authenticode + timestamp"

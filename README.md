@@ -160,10 +160,11 @@ MinecraftThroughTime itself never reads or changes a certificate store.
 You need `osslsigncode` (2.x) and `openssl`. Download the release files and the three public certificates, then check the root fingerprint before you use it:
 
 ```sh
-for c in r0 cb0 t0; do curl -fsSO "http://pki.catboy.systems/certs/$c.crt"; done
-openssl x509 -in r0.crt -outform DER | sha256sum   # must be ed5eaa1b7a66e154e8c82a3d45f65ddd36a3fbbad1f41a68d2bf4334ccc2d375
-cat r0.crt cb0.crt t0.crt > tsa-ca.pem
-osslsigncode verify -in MinecraftThroughTime.exe -CAfile r0.crt -TSA-CAfile tsa-ca.pem
+# the server sends DER; osslsigncode reads PEM only
+for c in r0 cb0 t0; do curl -fsS "http://pki.catboy.systems/certs/$c.crt" | openssl x509 -inform DER -out "$c.pem"; done
+openssl x509 -in r0.pem -outform DER | sha256sum   # must be ed5eaa1b7a66e154e8c82a3d45f65ddd36a3fbbad1f41a68d2bf4334ccc2d375
+cat r0.pem cb0.pem t0.pem > tsa-ca.pem
+osslsigncode verify -in MinecraftThroughTime.exe -CAfile r0.pem -TSA-CAfile tsa-ca.pem
 sha256sum -c SHA256SUMS
 ```
 

@@ -100,7 +100,10 @@ jobs:
           set -euo pipefail
           mkdir -p pki
           for c in r0 cb0 t0; do
-            curl -fsS -m 20 --retry 3 --retry-all-errors -A "mtt-ci/1" -o "pki/$c.crt" "http://pki.catboy.systems/certs/$c.crt"
+            curl -fsS -m 20 --retry 3 --retry-all-errors -A "mtt-ci/1" -o "pki/$c.der" "http://pki.catboy.systems/certs/$c.crt"
+            # served as DER; osslsigncode (and the release's r0.crt) use PEM
+            openssl x509 -inform DER -in "pki/$c.der" -out "pki/$c.crt" 2>/dev/null || openssl x509 -in "pki/$c.der" -out "pki/$c.crt"
+            rm "pki/$c.der"
           done
           fp=$(openssl x509 -in pki/r0.crt -outform DER | sha256sum | cut -c1-64)
           [ "$fp" = "$R0_SHA256" ] || { echo "::error::r0.crt sha256 $fp is not the pinned $R0_SHA256"; exit 1; }
