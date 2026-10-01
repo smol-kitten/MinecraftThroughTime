@@ -99,10 +99,11 @@ Each release contains:
 ```
 Marc Schneider Root CA R0 (Staging)          SHA-256 ed5eaa1b7a66e154e8c82a3d45f65ddd36a3fbbad1f41a68d2bf4334ccc2d375
 └─ catboy.systems CA CB0 (Staging)
-   └─ code-signing CA CS0
-      └─ per-runner CA
-         └─ 1-hour signing certificate for this repository and this CI run
-Timestamp: catboy.systems Timestamp CA T0 (Staging), under the same root
+   └─ catboy.systems Code Signing CA CS0-2026 (Staging)
+      └─ catboy.systems Runner CA <runner> 2026
+         └─ smol-kitten/MinecraftThroughTime (CA for this repository on that runner)
+            └─ smol-kitten/MinecraftThroughTime (1-hour signing certificate for one CI run)
+Timestamp: catboy.systems TSA0 (Staging), under catboy.systems Timestamp CA T0 (Staging), under the same root
 ```
 
 The signing certificate is valid for one hour only. The timestamp proves that the exe was signed while the certificate was valid, so the signature stays valid after the certificate expires.
@@ -117,7 +118,7 @@ Get-AuthenticodeSignature .\MinecraftThroughTime.exe | Format-List Status, Statu
 
 | `Status` | meaning |
 |---|---|
-| `NotTrusted` or `UnknownError` | The signature and the file are intact, but Windows does not trust the staging root. This is the expected result on a normal machine. |
+| `UnknownError` or `NotTrusted` | The signature and the file are intact, but Windows does not trust the staging root. This is the expected result on a normal machine (CI measured `UnknownError`). |
 | `Valid` | The signature chains to a root that this machine trusts (for example, after you imported R0 as shown below). |
 | `HashMismatch` | The file was changed after it was signed. Do not use it. |
 | `NotSigned` | The file has no signature. It is not a release file, or it is a copy baked by a version before v1.1.0. |

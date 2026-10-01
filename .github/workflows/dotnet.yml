@@ -253,6 +253,7 @@ jobs:
             Copy-Item .\MinecraftThroughTime.exe .\legacy.exe
             $fs = [IO.File]::Open("$work\legacy.exe", 'Append'); $b = [Text.Encoding]::UTF8.GetBytes("[MTT]$prof"); $fs.Write($b, 0, $b.Length); $fs.Close()
             $st = (Get-AuthenticodeSignature .\legacy.exe).Status
+            "legacy append (old bake): Authenticode $st"
             "| legacy append (old bake, for comparison) | False | | $st |" >> $env:GITHUB_STEP_SUMMARY
             if ($st -eq 'Valid') { throw "appended copy still Valid: the sidecar rationale does not hold" }
           }
