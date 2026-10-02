@@ -118,12 +118,12 @@ jobs:
         env:
           GATE: ${{ needs.sign.outputs.gate }}
         run: echo "::notice::not signed (gate=$GATE); catboy-sign signs tag builds only"
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         if: needs.sign.outputs.signed == 'true'
         with:
           name: ${{ needs.sign.outputs.artifact }}
           path: signed
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         if: needs.sign.outputs.signed == 'true'
         with:
           name: MinecraftThroughTime
@@ -159,11 +159,11 @@ jobs:
     env:
       SIGNED: ${{ needs.sign.outputs.signed }}
     steps:
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         with:
           name: ${{ needs.sign.outputs.artifact }}
           path: dist
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         with:
           name: pki
           path: pki
@@ -273,11 +273,11 @@ jobs:
         run: |
           echo "signed=$SIGNED gate=$GATE"
           [ "$SIGNED" = true ] || { echo "::error::a tag release ships signed or not at all"; exit 1; }
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         with:
           name: ${{ needs.sign.outputs.artifact }}
           path: rel
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         with:
           name: pki
           path: pki
