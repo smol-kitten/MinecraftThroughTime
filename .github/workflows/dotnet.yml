@@ -79,7 +79,7 @@ jobs:
       contents: read
       id-token: write
       attestations: write
-    uses: workcollection/fleet-actions/.github/workflows/catboy-sign.yml@v2.1.6
+    uses: workcollection/fleet-actions/.github/workflows/catboy-sign.yml@v2.1.7
     with:
       artifact-name: MinecraftThroughTime
       pe-glob: '*.exe'
