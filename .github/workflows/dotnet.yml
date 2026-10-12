@@ -70,7 +70,7 @@ jobs:
       with:
         name: MinecraftThroughTime
         path: ./Release/
-        retention-days: 7
+        retention-days: ${{ startsWith(github.ref, 'refs/tags/') && 30 || (github.event_name == 'pull_request' && 3 || 7) }}   # tags 30 d, PRs 3 d, branches 7 d (artifact retention policy, 2026-10-12)
 
   sign:
     if: github.event_name == 'push'
@@ -112,7 +112,7 @@ jobs:
         with:
           name: pki
           path: pki/
-          retention-days: 7
+          retention-days: ${{ startsWith(github.ref, 'refs/tags/') && 30 || (github.event_name == 'pull_request' && 3 || 7) }}   # tags 30 d, PRs 3 d, branches 7 d (artifact retention policy, 2026-10-12)
       - name: Nothing to verify on an unsigned run
         if: needs.sign.outputs.signed != 'true'
         env:
